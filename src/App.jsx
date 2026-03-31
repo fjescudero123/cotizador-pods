@@ -137,7 +137,7 @@ const ResBadge = ({label,value}) => (
     <span className="font-bold text-emerald-400">{value}</span>
   </div>
 );
- 
+
 export default function App() {
   const [tab,setTab] = useState('project');
   const [selCat,setSelCat] = useState(null);
@@ -914,7 +914,7 @@ const AutoStage=({title,badge,badgeColor,desc,items,total,subtitle,children})=>(
 <div className="p-5 space-y-4">{children}
 <div className="bg-emerald-900/40 border border-emerald-500/30 rounded-xl p-4 flex justify-between items-center"><div><p className="text-xs text-emerald-300/70 uppercase font-bold">{subtitle||'Total por POD'}</p></div><div className="text-right"><p className="text-2xl font-black text-emerald-400">{fmtC(total)}</p><p className="text-xs text-emerald-300/60 mt-0.5">{fmtUF(total)}</p></div></div>
 {items.length>0&&<div className="bg-slate-800/50 rounded-xl overflow-hidden"><div className="p-3 border-b border-slate-700/50 flex justify-between"><span className="text-[10px] text-slate-400 uppercase font-bold">Composición</span><span className="text-[10px] text-slate-500">{items.length} ítems</span></div><div className="max-h-40 overflow-y-auto">{items.map(m=><div key={m.id} className="flex items-center justify-between px-3 py-1 border-b border-slate-700/30 text-[11px]"><span className="text-slate-300 flex-1 truncate mr-2">{m.name}</span><span className="text-slate-500 w-12 text-right shrink-0">{m.baseQty}</span><span className="text-white font-medium w-16 text-right shrink-0">{fmtC(m.baseQty*m.cost)}</span></div>)}</div></div>}
-</div></div>{desc&&}</div>);
+</div></div>{desc&&<div className="bg-slate-100 border rounded-xl p-3 text-xs text-slate-600 mt-2">{desc}</div>}</div>);
   const navTabs=[{id:'project',icon:<Layers size={18}/>,l:'Proyecto'},{id:'design',icon:<LayoutGrid size={18}/>,l:'Diseño'},{id:'bom',icon:<Calculator size={18}/>,l:'BOM'},{id:'dashboard',icon:<LayoutDashboard size={18}/>,l:'Dashboard'},{id:'database',icon:<Database size={18}/>,l:'Data'}];
   return(
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-800">
