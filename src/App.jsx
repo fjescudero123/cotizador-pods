@@ -182,7 +182,7 @@ export default function App() {
       {id:'EST-THEX',cat:'ESTRUCTURA',name:'Tornillo Hexagonal 10-16 x 3/4" (fijación base+cielo)',brand:'STEELFIX',unit:'UNIDAD',cost:47,baseQty:250,pres:'Unidad'},
       {id:'EST-TAPE',cat:'ESTRUCTURA',name:'Max Tape 10x6mm (Rollo 10m)',unit:'UNIDAD',cost:11700,baseQty:0.5,pres:'Rollo 10m'},
       {id:'EST-TLENT1',cat:'ESTRUCTURA',name:'Tornillo Lenteja 8-18 x 1" (pilares compuestos)',brand:'STEELFIX',unit:'UNIDAD',cost:15,baseQty:100,pres:'Unidad'},
-      {id:'BASE-TARIMA',cat:'BASE',name:'Tarima Base POD (placa estructural)',brand:'APPSA',unit:'UNIDAD',cost:290000.0,baseQty:1.0,pres:'Unidad fabricada'},
+      {id:'BASE-TARIMA',cat:'BASE',name:'Tarima Base POD (placa estructural)',brand:'APPSA',unit:'MT2',cost:82386.0,baseQty:3.52,pres:'MT2'},
       {id:'POD_022',cat:'PUERTAS',name:'LISTON IMPREGNADO CEPILLADO 1 1/2 X 2¨',brand:'LIFEWOOD',unit:'UNIDAD',cost:2190.0,baseQty:2.0,pres:'Unidad'},
       {id:'POD_023',cat:'TECHO',name:'TERCIADO ESTRUCTURAL 1220 x 2440 x 9mm',brand:'CONSTRUPLAZA',unit:'UNIDAD',cost:16648.0,baseQty:1.3,pres:'Plancha 1220x2440mm'},
       {id:'CRI1988',cat:'ELECTRICO',name:'Tubo conduit C-IV 20 mm x 6 mt',brand:'S',unit:'UNIDAD',cost:1085.71,baseQty:0.5,pres:'Tubo 6m'},
@@ -448,7 +448,7 @@ export default function App() {
       if(cnt>0){
         mats.forEach(mat=>{
           let tQ=0,w=mat.waste||0,isP=false,pQ=0;
-          if(mat.cat==='BASE'){const floorRatio=fa/BASE_REF_AREA_PISO;pQ=mat.baseQty*floorRatio*(1+EST_MERMA);isP=true;}
+          if(mat.cat==='BASE'){if(mat.pres==='MT2'){pQ=fa;}else{const floorRatio=fa/BASE_REF_AREA_PISO;pQ=mat.baseQty*floorRatio*(1+EST_MERMA);}isP=true;}
           if(mat.cat==='ELECTRICO'){pQ=mat.baseQty;isP=true;}
           if(mat.cat==='SANITARIO AGUA POTABLE'){pQ=mat.baseQty;isP=true;}
           if(mat.cat==='SANITARIO ALCANTARILLADO'){pQ=mat.baseQty;isP=true;}
@@ -519,11 +519,11 @@ export default function App() {
         });
       }
     });
-    const isContinuous=(pres)=>{const p=(pres||'').toLowerCase();return p==='metro lineal'||p==='kg';};
+    const isContinuous=(pres)=>{const p=(pres||'').toLowerCase();return p==='metro lineal'||p==='kg'||p==='mt2'||p==='m2';};
     let totM=0,totMTheo=0;
     Object.values(bm).forEach(item=>{
       if(item.realQty>0){
-        item.purchaseQty=isContinuous(item.pres)?Math.ceil(item.realQty*100)/100:Math.ceil(item.realQty);
+        item.purchaseQty=isContinuous(item.pres)?Math.round(item.realQty*100)/100:Math.ceil(item.realQty);
         item.materialCost=item.purchaseQty*item.cost;
         item.theoreticalCost=item.theoreticalQty*item.cost;
         item.totalCost=item.materialCost;
