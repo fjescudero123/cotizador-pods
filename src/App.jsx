@@ -11,9 +11,9 @@ const SUBLINES = {
   'REVESTIMIENTO DE MURO':[{v:'',l:'Insumo fijo (siempre)'},{v:'revRH125',l:'Plancha — Zona húmeda (RH)'},{v:'revRF125',l:'Plancha — Protección fuego (RF)'},{v:'revST125',l:'Plancha — Zona seca (ST 12.5)'},{v:'revST10',l:'Plancha — Shaft (ST 10)'},{v:'revFibro',l:'Plancha — Faldón tina (fibrocemento)'}],
   'PUERTAS':[{v:'',l:'Insumo fijo (siempre)'},{v:'puerta',l:'Puerta (seleccionable)'},{v:'cerradura',l:'Cerradura (seleccionable)'}],
 };
-const CostChart = ({data,fmt}) => {
+const CostChart = ({data,fmt,onBarClick}) => {
   const max = Math.max(...data.map(d=>d.v),1);
-  return(<div className="space-y-2">{data.map((d,i)=>(<div key={i} className="flex items-center gap-3"><span className="text-xs text-slate-600 w-32 truncate text-right">{d.l}</span><div className="flex-1 bg-slate-100 rounded-full h-5 overflow-hidden"><div className="h-full rounded-full" style={{width:`${(d.v/max)*100}%`,backgroundColor:i%2?'#929965':'#7A8C8A'}}></div></div><span className="text-xs font-bold text-slate-700 w-24 text-right">{fmt(d.v)}</span></div>))}</div>);
+  return(<div className="space-y-2">{data.map((d,i)=>(<div key={i} className={`flex items-center gap-3 ${onBarClick?'cursor-pointer hover:bg-slate-50 rounded-lg p-1 -m-1':''}`} onClick={()=>onBarClick&&onBarClick(d.l)}><span className="text-xs text-slate-600 w-32 truncate text-right">{d.l}</span><div className="flex-1 bg-slate-100 rounded-full h-5 overflow-hidden"><div className="h-full rounded-full" style={{width:`${(d.v/max)*100}%`,backgroundColor:i%2?'#929965':'#7A8C8A'}}></div></div><span className="text-xs font-bold text-slate-700 w-24 text-right">{fmt(d.v)}</span></div>))}</div>);
 };
 const MAYU_LOGO_SVG = ({s=40})=>(<svg viewBox="0 0 190 100" width={s} height={s*100/190} fill="none"><polygon points="10,80 60,80 60,30" fill="#E3B864"/><rect x="63" y="30" width="4" height="50" fill="#E3B864"/><polygon points="71,80 71,30 95,10 95,80" fill="#7A8C8A"/><polygon points="99,80 99,10 123,30 123,80" fill="#E3E5E0"/><polygon points="127,80 127,30 180,80" fill="#929965"/><text x="95" y="98" textAnchor="middle" fontWeight="900" fontSize="18" letterSpacing="3" fill="#2c2c2a">MAYU</text></svg>);
 const STROKE_COLORS = ['#ef4444','#f97316','#eab308','#22c55e','#0ea5e9','#6366f1','#a855f7','#ec4899','#14b8a6','#84cc16'];
@@ -137,7 +137,7 @@ const ResBadge = ({label,value}) => (
     <span className="font-bold text-emerald-400">{value}</span>
   </div>
 );
- 
+
 export default function App() {
   const [tab,setTab] = useState('project');
   const [selCat,setSelCat] = useState(null);
@@ -334,7 +334,7 @@ export default function App() {
 <div class="client-box"><b>Cliente:</b> ${proj.client||'—'}<br><b>RUT:</b> ${proj.clientRut||'—'}<br><b>Contacto:</b> ${proj.contactName||'—'}<br><b>Proyecto:</b> ${proj.name||'—'}${proj.clientAddress?'<br><b>Direcci\u00f3n:</b> '+proj.clientAddress:''}</div>
 <div class="kpi"><div class="kpi-box"><div class="kpi-vg">${fmtC(calc.totals.salePriceTotal)}</div><div class="kpi-l">Valor total del proyecto</div><div class="kpi-s">${fmtUF(calc.totals.salePriceTotal)}</div></div><div class="kpi-box"><div class="kpi-v">${calc.totalPods}</div><div class="kpi-l">Total PODs</div></div></div>
 <div class="sec"><div class="sec-t">Detalle por tipolog\u00eda</div><table><thead><tr><th>Tipo de ba\u00f1o</th><th style="text-align:center">Cantidad</th><th style="text-align:right">\u00c1rea</th><th style="text-align:right">Precio Unit.</th><th style="text-align:right">Subtotal</th></tr></thead><tbody>${typPriceRows}<tr class="tot-row"><td colspan="4" style="text-align:right;border-top:2px solid #D4A44C">Total Neto</td><td style="text-align:right;border-top:2px solid #D4A44C;color:#D4A44C">${fmtC(calc.totals.salePriceTotal)}</td></tr></tbody></table></div>
-<div class="sec"><table style="font-size:13px"><tr><td style="padding:6px 0;color:#999">Valor UF referencial</td><td style="padding:6px 0;text-align:right">$\${UF_VALUE.toLocaleString('es-CL')}</td></tr><tr><td style="padding:6px 0;color:#999">Precio por POD (UF)</td><td style="padding:6px 0;text-align:right">${fmtUF(calc.totals.salePricePerPod)}</td></tr><tr><td style="padding:6px 0;color:#999">Valor total proyecto (UF)</td><td style="padding:6px 0;text-align:right;font-weight:600">${fmtUF(calc.totals.salePriceTotal)}</td></tr></table></div>
+<div class="sec"><table style="font-size:13px"><tr><td style="padding:6px 0;color:#999">Valor UF referencial</td><td style="padding:6px 0;text-align:right">$${UF_VALUE.toLocaleString('es-CL')}</td></tr><tr><td style="padding:6px 0;color:#999">Precio por POD (UF)</td><td style="padding:6px 0;text-align:right">${fmtUF(calc.totals.salePricePerPod)}</td></tr><tr><td style="padding:6px 0;color:#999">Valor total proyecto (UF)</td><td style="padding:6px 0;text-align:right;font-weight:600">${fmtUF(calc.totals.salePriceTotal)}</td></tr></table></div>
 <div class="note"><b>Alcance:</b> Suministro e instalaci\u00f3n de PODs de ba\u00f1o prefabricados, incluyendo estructura steel frame, revestimientos, instalaciones sanitarias, el\u00e9ctricas, terminaciones y artefactos seg\u00fan especificaci\u00f3n t\u00e9cnica.<br><b>No incluye:</b> Obras civiles de conexi\u00f3n, transporte a obra, grúa de montaje.</div>
 <div class="foot"><p>MAYU · Cotizaci\u00f3n preliminar ${cotNum} · ${today}</p><p>Valores en CLP neto (sin IVA) · Sujeto a confirmaci\u00f3n de stock y plazos de entrega</p></div>
 </body></html>`;
@@ -1142,16 +1142,7 @@ const AutoStage=({title,badge,badgeColor,desc,items,total,subtitle,children})=>(
               :<div className="bg-white rounded-2xl border shadow-sm overflow-hidden"><table className="w-full text-left border-collapse"><thead><tr className="bg-slate-100 text-slate-600 text-xs uppercase tracking-wider"><th className="p-3 border-b w-1/3">Partida</th><th className="p-3 border-b text-center">Items</th><th className="p-3 border-b text-right">Costo Mat.</th><th className="p-3 border-b text-right font-bold">Total</th><th className="p-3 border-b w-14"></th></tr></thead><tbody className="text-sm">
                 {Object.entries(calc.bomByCategory).map(([cat,items])=>{const t=calc.costsByCategory[cat];return(<tr key={cat} onClick={()=>setSelCat(cat)} className="border-b cursor-pointer hover:bg-slate-50 group"><td className="p-4 font-semibold flex items-center gap-2"><Layers size={16} className="text-blue-500"/>{cat}</td><td className="p-4 text-center font-bold text-slate-500">{items.length}</td><td className="p-4 text-right text-slate-600">{fmtC(t.materialCost)}</td><td className="p-4 text-right font-bold border-l">{fmtC(t.totalCost)}</td><td className="p-4 text-center"><button className="text-blue-600 bg-blue-100 p-2 rounded-full group-hover:bg-blue-600 group-hover:text-white"><Search size={16}/></button></td></tr>);})}
               </tbody></table></div>}
-              {selCat&&calc.bomByCategory[selCat]&&(
-                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                  <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col" style={{animation:'scaleIn .2s ease'}}>
-                    <div className="flex justify-between items-center p-5 border-b bg-slate-50 rounded-t-2xl"><div><div className="flex items-center gap-2 text-blue-600 mb-1"><Layers size={20}/><span className="text-xs font-bold uppercase tracking-wider">{selCat}</span></div><p className="text-sm text-slate-500">{calc.bomByCategory[selCat].length} productos</p></div><button onClick={()=>setSelCat(null)} className="text-slate-400 hover:text-slate-700 bg-slate-200 p-2 rounded-full"><X size={20}/></button></div>
-                    <div className="flex-1 overflow-y-auto p-6"><table className="w-full text-left border-collapse"><thead><tr className="bg-slate-100 text-slate-600 text-xs uppercase"><th className="p-3 border-b">ID</th><th className="p-3 border-b">Descripción</th><th className="p-3 border-b">Pres.</th><th className="p-3 border-b text-right">Cant. Compra</th><th className="p-3 border-b text-right">P.U.</th><th className="p-3 border-b text-right">Costo Total</th></tr></thead><tbody className="text-sm">
-                      {calc.bomByCategory[selCat].map((it,idx)=>{const hasWaste=it.purchaseQty>it.realQty*1.01;return(<tr key={idx} className="border-b hover:bg-slate-50"><td className="p-3"><span className="font-mono text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded">{it.key}</span></td><td className="p-3 font-semibold text-slate-800">{it.name}</td><td className="p-3"><span className="text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">{it.pres}</span></td><td className="p-3 text-right"><span className="font-bold text-blue-600">{fmtN(it.purchaseQty)}</span>{hasWaste&&<span className="block text-[10px] text-slate-400">({fmtN(it.realQty)} teórico)</span>}</td><td className="p-3 text-right text-slate-500">{fmtC(it.cost)}</td><td className="p-3 text-right font-bold border-l text-slate-800">{fmtC(it.materialCost)}</td></tr>);})}
-                    </tbody></table></div>
-                  </div>
-                </div>
-              )}
+
             </div>
           )}
           {/* TAB DASHBOARD */}
@@ -1183,7 +1174,7 @@ const AutoStage=({title,badge,badgeColor,desc,items,total,subtitle,children})=>(
                   <div className="bg-white p-6 rounded-2xl border"><p className="text-sm text-slate-500 mb-1">Margen/POD</p><p className="text-2xl font-bold text-emerald-600">{calc.totalPods>0?fmtC((calc.totals.salePricePerPod)-(calc.totals.materialTheoretical/calc.totalPods)-(calc.totals.labor/calc.totalPods)):'-'}</p></div>
                 </div>
               </div>
-              {Object.keys(calc.costsByCategory).length>0&&<div className="bg-white p-6 rounded-2xl border shadow-sm mb-6"><h3 className="font-bold text-slate-700 mb-4 flex items-center gap-2"><BarChart3 size={20} className="text-blue-500"/> Costos por Partida</h3><CostChart data={Object.entries(calc.costsByCategory).map(([c,v])=>({l:c,v:v.totalCost})).sort((a,b)=>b.v-a.v)} fmt={fmtC}/></div>}
+              {Object.keys(calc.costsByCategory).length>0&&<div className="bg-white p-6 rounded-2xl border shadow-sm mb-6"><h3 className="font-bold text-slate-700 mb-4 flex items-center gap-2"><BarChart3 size={20} className="text-blue-500"/> Costos por Partida</h3><CostChart data={Object.entries(calc.costsByCategory).map(([c,v])=>({l:c,v:v.totalCost})).sort((a,b)=>b.v-a.v)} fmt={fmtC} onBarClick={(cat)=>setSelCat(cat)}/></div>}
               <button onClick={saveToCRM} disabled={busy} className="w-full mb-4 text-white font-bold py-4 rounded-2xl hover:opacity-90 flex items-center justify-center gap-2 shadow-lg disabled:opacity-50" style={{backgroundColor:'#D4A44C'}}>{busy?'Generando...':<><Send size={20}/> Generar Cotización</>}</button>
               <button onClick={exportXls} disabled={busy||!calc.bom.length} className="w-full mb-8 bg-white text-slate-700 font-bold py-4 rounded-2xl hover:bg-slate-100 flex items-center justify-center gap-2 border shadow-sm disabled:opacity-50"><Download size={20}/> Descargar Excel</button>
               <div className="bg-white p-6 rounded-2xl border shadow-sm"><h3 className="font-bold text-slate-700 mb-4">Tipologías</h3><div className="overflow-x-auto"><table className="w-full text-left text-sm min-w-[400px]"><thead><tr className="bg-slate-100 text-slate-600"><th className="p-3 border-b">Tipo</th><th className="p-3 border-b text-center">Un.</th><th className="p-3 border-b text-right">Área m²</th><th className="p-3 border-b text-right">Perím. ml</th><th className="p-3 border-b text-right">M.O./POD</th></tr></thead><tbody>{typs.map(t=><tr key={t.id} className="border-b"><td className="p-3 font-semibold">{t.name}</td><td className="p-3 text-center font-bold text-blue-600">{t.count}</td><td className="p-3 text-right">{fmtN(calc.typMetrics[t.id]?.floorArea)} m²</td><td className="p-3 text-right">{fmtN(calc.typMetrics[t.id]?.perimeter)} ml</td><td className="p-3 text-right">{fmtC(t.config.laborCostPerPod||0)}</td></tr>)}</tbody></table></div></div>
@@ -1241,6 +1232,16 @@ const AutoStage=({title,badge,badgeColor,desc,items,total,subtitle,children})=>(
             </div>
           )}
         </main>
+      {selCat&&calc.bomByCategory[selCat]&&(
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col" style={{animation:'scaleIn .2s ease'}}>
+            <div className="flex justify-between items-center p-5 border-b bg-slate-50 rounded-t-2xl"><div><div className="flex items-center gap-2 text-blue-600 mb-1"><Layers size={20}/><span className="text-xs font-bold uppercase tracking-wider">{selCat}</span></div><p className="text-sm text-slate-500">{calc.bomByCategory[selCat].length} productos · {fmtC(calc.costsByCategory[selCat]?.totalCost||0)}</p></div><button onClick={()=>setSelCat(null)} className="text-slate-400 hover:text-slate-700 bg-slate-200 p-2 rounded-full"><X size={20}/></button></div>
+            <div className="flex-1 overflow-y-auto p-6"><table className="w-full text-left border-collapse"><thead><tr className="bg-slate-100 text-slate-600 text-xs uppercase"><th className="p-3 border-b">ID</th><th className="p-3 border-b">Descripción</th><th className="p-3 border-b">Pres.</th><th className="p-3 border-b text-right">Cant. Compra</th><th className="p-3 border-b text-right">P.U.</th><th className="p-3 border-b text-right">Costo Total</th></tr></thead><tbody className="text-sm">
+              {calc.bomByCategory[selCat].map((it,idx)=>{const hasWaste=it.purchaseQty>it.realQty*1.01;return(<tr key={idx} className="border-b hover:bg-slate-50"><td className="p-3"><span className="font-mono text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded">{it.key}</span></td><td className="p-3 font-semibold text-slate-800">{it.name}</td><td className="p-3"><span className="text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">{it.pres}</span></td><td className="p-3 text-right"><span className="font-bold text-blue-600">{fmtN(it.purchaseQty)}</span>{hasWaste&&<span className="block text-[10px] text-slate-400">({fmtN(it.realQty)} teórico)</span>}</td><td className="p-3 text-right text-slate-500">{fmtC(it.cost)}</td><td className="p-3 text-right font-bold border-l text-slate-800">{fmtC(it.materialCost)}</td></tr>);})}
+            </tbody></table></div>
+          </div>
+        </div>
+      )}
       </div>
     </div>
   );
