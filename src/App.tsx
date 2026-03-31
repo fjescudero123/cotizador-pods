@@ -3,50 +3,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Calculator, Ruler, Settings, Database, Layers, Box, LayoutDashboard, Search, Factory, X, Plus, UploadCloud, Trash2, CheckCircle2, AlertTriangle, Edit2, FileText, Download, LayoutGrid, Square, Hexagon, PanelBottom, ChevronDown, ChevronRight, Wrench, Send, Filter, Paperclip, DoorOpen, Zap, Droplets, ShowerHead, PaintBucket, Home, BarChart3, Package, Menu, CircleDollarSign
 } from 'lucide-react';
-import { initializeApp } from 'firebase/app';
-import { getAuth, signInAnonymously } from 'firebase/auth';
-import { getFirestore, collection, onSnapshot } from 'firebase/firestore';
-import * as XLSX from 'xlsx';
-
-
-// --- FIREBASE: Conexión al CRM MAYU ---
-const FIREBASE_CONFIG = {
-  apiKey: atob("QUl6YVN5QXNWZ2Y1R1JSdWYtaE50OU14cENKY2U2d2RiOWhVQjcw"),
-  authDomain: "crm---mayu.firebaseapp.com",
-  projectId: "crm---mayu",
-  storageBucket: "crm---mayu.firebasestorage.app",
-  messagingSenderId: "304169874263",
-  appId: "1:304169874263:web:1cf55b40918bf2de73c412"
-};
-
-const useCRMProjects = () => {
-  const [crmProjects, setCrmProjects] = useState([]);
-  const [crmLoading, setCrmLoading] = useState(true);
-  useEffect(() => {
-    let unsub = null;
-    const init = async () => {
-      try {
-        const app = initializeApp(FIREBASE_CONFIG, 'crm-reader');
-        const a = getAuth(app);
-        await signInAnonymously(a);
-        const db = getFirestore(app);
-        unsub = onSnapshot(collection(db, 'projects'), (snap) => {
-          const all = snap.docs.map(d => ({id: d.id, ...d.data()}));
-          const pods = all.filter(p => p.linea_negocio === 'Pods' && p.estado_comercial === 'Antecedentes técnicos recibidos');
-          setCrmProjects(pods);
-          setCrmLoading(false);
-        });
-      } catch (e) {
-        console.log('CRM no disponible:', e.message);
-        setCrmLoading(false);
-      }
-    };
-    init();
-    return () => { if (unsub) unsub(); };
-  }, []);
-  return { crmProjects, crmLoading };
-};
-
+const useCRMProjects = () => { const [crmProjects] = useState([]); const [crmLoading] = useState(false); return { crmProjects, crmLoading }; };
 const SUBLINES = {
   'TERMINACION DE MURO':[{v:'',l:'Insumo fijo (siempre)'},{v:'ceramica',l:'Cerámica'},{v:'pintura',l:'Pintura — pasta muro'},{v:'pintura_latex',l:'Pintura — látex'},{v:'pintura_esmalte',l:'Pintura — esmalte'}],
   'PISO':[{v:'',l:'Insumo fijo'},{v:'ceramica',l:'Cerámica'},{v:'vinilico',l:'Vinílico'},{v:'porcelanato',l:'Porcelanato'}],
@@ -54,9 +11,11 @@ const SUBLINES = {
   'REVESTIMIENTO DE MURO':[{v:'',l:'Insumo fijo (siempre)'},{v:'revRH125',l:'Plancha — Zona húmeda (RH)'},{v:'revRF125',l:'Plancha — Protección fuego (RF)'},{v:'revST125',l:'Plancha — Zona seca (ST 12.5)'},{v:'revST10',l:'Plancha — Shaft (ST 10)'},{v:'revFibro',l:'Plancha — Faldón tina (fibrocemento)'}],
   'PUERTAS':[{v:'',l:'Insumo fijo (siempre)'},{v:'puerta',l:'Puerta (seleccionable)'},{v:'cerradura',l:'Cerradura (seleccionable)'}],
 };
-
-const MAYU_LOGO = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAE8AAAA8CAYAAAAngufpAAAJAUlEQVR42u1bTUwcRxZ+XdXQ0zO0ESYocbCDD7Zk7fri0+QQH1cre/dgdg1ByihrZP7JwaCOk1WUA9pEK0utYMmeIQQw8gat2NgIbQ7eXe1tbyiHXMBGsZU1Ada2gOQwDD0/XdV7MIWKoqenu2cGjMOTRgx0vXrVX733vlevGwkhhOAFFjOdxmooRB4+mu8FADh54lT83r17+Pz582Sv1ybDPhKM5cGHj+bh5IlTcQbqXq4HwT6TTQB71VCImOk0NtNpzF/XdV36WYJHNj5AXgFcXFoYUkMhooZChAfMMAybEGr/7MIWh69Rr2NzudzlxaUFeOWVV99jXnjlVuzwmzaiGH+1xufLl9bzmNeQjQ/Q0lTLheXpWIMfAFdXn91kIGnfH199TPCDgZux2wAAole+VODpui4ZhmEDADz91/IxSjMTWyHsMfRyudzlJ0+WTDOdxoZh2Ajhf1BKzg3cjN0ejzfXGoZhj8eba/cleE55jBJiM+A6Puy/1Pp+361i7SwtPe4CAKCUnMtlrRpKybnHBD/oTFysa+39aq2n5zTad+CJeUzXdQlhvAVcNpuNAwC89uv6xVLZrKiUf8plrRoAgNesirnxeHNtIjFLSw1g2cHj8xgfpq3v991iwLGwLbXtXNaqyWWtmscEPxi4EWtPJGaprutSqdi45ODx+WVpquUCy2MsJ+m6Ll3qfy9lk9zbu5Vbc1mrhtrk04EbsXbDMGyMkVQKIilZqUIotZ/+/d3j9Y0TC8vTsQabWmfYtfrGiQWACej4sP/SajYd3wtyymWtmopK+HTgZuytN6Rsf2uvsTYeb65t7X1e1uyZ5zFSqG+cWFiaarlArNScDeRXEpK/ZWP4/LZXwhMJA64YJi4avOXpWAMOX6MYIWlxqinOlxt8KO81cDyAAAA8gEGJJDB4hFB7eTrWwML0hzuN6za1/rAfzsdORNKZuFhHfRIJChqmGCOJD1PYh8ITyXDP3RXkk0jkQMCFr9Hl6VgDpZmrlGbK7m2bnZPPV1efnc7lcpfLRST/Q2nd6DFWOhMX64Z77q6UzPNYmDLgiJWa240wZZ0TNRQix442dFdUVIyVi0hepyFjPN5cO9xzd8VLHkT7JUx1XZfMdBofO9rQTYjVV24m9nIiKQge72352HQ3xDAMm7WeTp44FT9y5Ki6G0TiVsoUBI+x6W6FqZcwZi2o+QffqWUL400icSuiZbcc9/Trd4/b1DpDrJQvb3ujabpqcaopzp8yygUgAHQ/fDQ/69QcKNYOtcnWieSbufs/JRKztCB4hFAbYyQtTVlnNk8Kt/0YXZxqikuA/y0h+VsJyG0AAAlX/C1vFwRL/wEAwHLkl/WNEwvMvhcAN7/HWYmBJPwRSPBWKTfrB1r5u0RidoQSaiNuXZLbo0dWBL/o9Vq52+355pcL5btCD2X+Mv7fmm/m7m8LkRvGbwCUPz83lvkjxuFr1Kn4ZO0pJj09p5EYGl7DmGdlNxtia4zJ2Y/PoqgZtQvNz4v0oj/0fpFFrtK0Nv4P68nkqN9JipnDj25QO6LeysrKeF1dXavfucR5QK6sTPEf5FMOVVd38PoRTRvzqhvRtDHRvpu+n7EIIXT16lUs6hyqru4IMpd4n3JlZWpHyKqRyIgfr9swzcGgbp/JZFq8/I1JWFX7vI4FAPh8eHjbOVhRlMl8HoYRmim6JZXJZFp2uGe+RO0TaNcQ8HDN6cbVSGREfOUi38aaqVR7KXMeCupNVZrWVmjn3c6pbjY2THMwX2uIWpYmbraYv5w2VlGUyXyMXFLwCnlGseHqFE78zTmNyQeE01qcNrbUXucKnhs4XsM6X8FJKI2KNybmHHFMISB4TxPXLubKsoPnltOK8To1FCKiV+i6Lon5rFBKyEce4sYqijLZ1dk5tuvgOZGHWy4JQjJhVe1j1b4IiBshOZEHkuWkE0k4nTLKAp54A+JieI9QFGXSL8WLHsWD4Nf7RPIolBvLDt7Kysq4aJR5AJLlZDFJ2IvX5rMdBKBykIQreGooRESjmUympdhwdfIkjNBMlaa18R8/RbMbQG4k8adPPkFlzXmFqnm/u+oEzIZpDoofJ7AKsbsTUG4koYZCRNx8N3Z3uq4oymRe8NyMB6H+YhjarWgulbh5+NddXZLT9bzgGYZhOyVkt/NhOepCL0VzoHozT60obpKu69LbX375hdNZuOBDb0VRJnnU/YarmU7jw7W1O1y+t7u7w00vPjT0BW+XUBo10+nxUnWMdV2X4kND2+4tk8m0fHb9eosaiUxihGYIpdHPrl9vccLkr++8MybJlZWpQvTPWDasqn2i11VpWhsfkoqiTIoAiyxdqMTwqyeuAQCg/8qVQ17qO9GGF2HrQF4HU8vSgjRKg7K0U6ekmC5O0FrRbXzZW/BO5YnXY5zf/l3QMopallaIBMOq2rcDaLHz6reTHESn1CKuIeiaeD3WcXab7+ABUBEin/347DbwfnHkVd+vmd5/8mwtnz5/Lcj8XvXd1uBH8Oz8jtcryOlTO+bTvj++euB5xXjeR4NNvz2AISB4NoHpAxj8CXuJSF4L268fwOFXcgBw8LpFcWG7m/9W/jLJxsY/pQPPK0KC/R8G3Z3/4S+V3WKiy01XOlRd3UEojWKEZtaTyVF2+Ga/V2laG/sJ8PwhjRqJjJipVDs/lr/G66uRyMiPa2td7Kk+68gyHd42f/gX12OmUu1sDfxbTkxfnJt9Z3r8PeQby5+7ncazuZhNmSmyhfKLViORKADM5OuWiDe9OR4YsFWaBhum2XK4tnbbwngb/BybC9vqGbJNYt8Jpez1im1t8fVkcnSzP7d1g8we0wOAUR40vm2mRiJRfn2bY0YZYHw3h8cLsaf1bECQtpNT14TtaFhV+zBCM05teB4Yr12XsKr28QCwtYu9uw3THOS90ikc+ZDk79tMpdqRLCdFXbaZzKbM7QyIobieTI4iWU4yDySURpEsD2KE+njv3ARqS1+NRKL871N37nT9vqkpyu9elaZt20ne+zlPmBFTg+DZbfke3PAtJozQDJLlJKF0knlmfGiItdbb8wHMhS4fjVt4/R9x9VEgxm5QnQAAAABJRU5ErkJggg==';
-
+const CostChart = ({data,fmt}) => {
+  const max = Math.max(...data.map(d=>d.v),1);
+  return(<div className="space-y-2">{data.map((d,i)=>(<div key={i} className="flex items-center gap-3"><span className="text-xs text-slate-600 w-32 truncate text-right">{d.l}</span><div className="flex-1 bg-slate-100 rounded-full h-5 overflow-hidden"><div className="h-full rounded-full" style={{width:`${(d.v/max)*100}%`,backgroundColor:i%2?'#929965':'#7A8C8A'}}></div></div><span className="text-xs font-bold text-slate-700 w-24 text-right">{fmt(d.v)}</span></div>))}</div>);
+};
+const MAYU_LOGO_SVG = ({s=40})=>(<svg viewBox="0 0 190 100" width={s} height={s*100/190} fill="none"><polygon points="10,80 60,80 60,30" fill="#E3B864"/><rect x="63" y="30" width="4" height="50" fill="#E3B864"/><polygon points="71,80 71,30 95,10 95,80" fill="#7A8C8A"/><polygon points="99,80 99,10 123,30 123,80" fill="#E3E5E0"/><polygon points="127,80 127,30 180,80" fill="#929965"/><text x="95" y="98" textAnchor="middle" fontWeight="900" fontSize="18" letterSpacing="3" fill="#2c2c2a">MAYU</text></svg>);
 const STROKE_COLORS = ['#ef4444','#f97316','#eab308','#22c55e','#0ea5e9','#6366f1','#a855f7','#ec4899','#14b8a6','#84cc16'];
 const UF_VALUE = 39841.72;
 const REND_ADHESIVO_M2_SACO = 3.83;   // Bekron A·C: 1.6kg/m²×4mm=6.4kg/m² → saco 24.5kg/6.4
@@ -70,13 +29,10 @@ const MO_COSTO_MENSUAL = 14840000;  // Costo empresa equipo operarios/mes
 const MO_PODS_SEMANA = 10;           // Capacidad producción semanal
 const MO_SEMANAS_MES = 52/12;        // 4.333 semanas/mes
 const MO_COST_POD = Math.round(MO_COSTO_MENSUAL / (MO_PODS_SEMANA * MO_SEMANAS_MES)); // $342.644/POD   // Conservador sobre YC nuevo (ficha: 135, terreno ~105)
-
 const EST_REF_AREA_NETA = 15.36;
 const EST_REF_KG = 104.6;
 const EST_MERMA = 0.05;
-
 const BASE_REF_AREA_PISO = 3.14;
-
 const STAGES = [
       {id:'base',label:'1. Base',cat:'BASE',icon:Home},
       {id:'estructura',label:'2. Estructura',cat:'ESTRUCTURA',icon:Box},
@@ -92,7 +48,6 @@ const STAGES = [
       {id:'puertas',label:'13. Puertas',cat:'PUERTAS',icon:DoorOpen},
       {id:'insumos',label:'14. Insumos',cat:'INSUMOS GENERALES',icon:Package}
 ];
-
 const classifyToStage = (rawCat) => {
   const c = (rawCat||'').toUpperCase().trim();
   if (c.includes('TERMINACION BASE')) return 'BASE';
@@ -117,13 +72,11 @@ const classifyToStage = (rawCat) => {
   if (c.includes('INSUMOS')) return 'INSUMOS GENERALES';
   return 'INSUMOS GENERALES';
 };
-
 const defGeom = {
   mode:'rect', length:2.20, width:1.60, height:2.40,
   doorWidth:0.75, doorHeight:2.00, doorCount:1,
   polygonSides:[{id:1,dir:'R',len:2.20},{id:2,dir:'D',len:1.60},{id:3,dir:'L',len:2.20},{id:4,dir:'U',len:1.60}]
 };
-
 const defConf = {
   cieloYC:'CRI1916', cieloLayers:1,
   termWallCfg:'[{"type": "pintura", "paint": "POD_142", "coats": 2}, {"type": "ceramica"}, {"type": "pintura", "paint": "POD_143", "coats": 2}, {"type": "pintura", "paint": "POD_142", "coats": 2}]',
@@ -136,9 +89,7 @@ const defConf = {
   puertaMat:'POD_144', cerraduraMat:'POD_145', puertaQty:1,
   laborCostPerPod:MO_COST_POD,
 };
-
 const defTyp = {id:`typ-${Date.now()}`,name:'Baño Tipo 1',count:1,geometry:defGeom,config:defConf};
-
 const Notify = ({n,onClose}) => {
   if(!n) return null;
   const e = n.type==='error';
@@ -150,7 +101,6 @@ const Notify = ({n,onClose}) => {
     </div>
   );
 };
-
 const ConfirmDlg = ({title,msg,onOk,onNo,danger}) => (
   <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
     <div className="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-sm" style={{animation:'scaleIn .2s ease'}}>
@@ -163,7 +113,6 @@ const ConfirmDlg = ({title,msg,onOk,onNo,danger}) => (
     </div>
   </div>
 );
-
 const DkSel = ({label,value,onChange,opts,ph}) => (
   <div>
     {label&&<label className="block text-[10px] font-bold text-slate-400 uppercase mb-2">{label}</label>}
@@ -173,7 +122,6 @@ const DkSel = ({label,value,onChange,opts,ph}) => (
     </select>
   </div>
 );
-
 const DkIn = ({label,value,onChange,step,sfx}) => (
   <div className="bg-slate-800 p-3 rounded-xl border border-slate-700">
     <label className="block text-[10px] text-slate-400 uppercase font-bold">{label}</label>
@@ -183,33 +131,13 @@ const DkIn = ({label,value,onChange,step,sfx}) => (
     </div>
   </div>
 );
-
 const ResBadge = ({label,value}) => (
   <div className="bg-slate-800 p-3 rounded-xl border border-emerald-500/30 flex justify-between items-center">
     <span className="text-xs text-slate-400">{label}</span>
     <span className="font-bold text-emerald-400">{value}</span>
   </div>
 );
-
-const CostChart = ({data,fmt}) => {
-  if(!data||!data.length) return null;
-  const mx = Math.max(...data.map(d=>d.v),1);
-  const bH=26, gap=5, lW=150, bA=300, vW=100, tW=lW+bA+vW;
-  const cH = data.length*(bH+gap)+10;
-  const cols=['#3b82f6','#6366f1','#8b5cf6','#a855f7','#ec4899','#ef4444','#f97316','#eab308','#22c55e','#14b8a6','#0ea5e9','#06b6d4','#84cc16','#64748b'];
-  return (
-    <svg viewBox={`0 0 ${tW} ${cH}`} className="w-full" style={{maxHeight:Math.min(cH,500)}}>
-      {data.map((d,i)=>{const y=i*(bH+gap)+5;const w=mx>0?(d.v/mx)*bA:0;return(
-        <g key={i}>
-          <text x={lW-8} y={y+bH/2+4} textAnchor="end" fontSize="10" fill="#64748b" fontWeight="600">{d.l.length>20?d.l.substring(0,20)+'…':d.l}</text>
-          <rect x={lW} y={y} width={Math.max(w,2)} height={bH} rx="4" fill={cols[i%cols.length]} opacity=".85"/>
-          <text x={lW+Math.max(w,2)+8} y={y+bH/2+4} fontSize="11" fill="#334155" fontWeight="700">{fmt(d.v)}</text>
-        </g>
-      );})}
-    </svg>
-  );
-};
-
+ 
 export default function App() {
   const [tab,setTab] = useState('project');
   const [selCat,setSelCat] = useState(null);
@@ -218,26 +146,20 @@ export default function App() {
   const [notif,setNotif] = useState(null);
   const [showClear,setShowClear] = useState(false);
   const [mobMenu,setMobMenu] = useState(false);
-
   const [mats,setMats] = useState([]);
-
   const [proj,setProj] = useState({name:'Cotización B2B',client:'',marginPct:20,contingencyPct:5});
   const [typs,setTyps] = useState([defTyp]);
   const [actTypId,setActTypId] = useState(typs[0]?.id);
-
   const [matFilt,setMatFilt] = useState({code:'',cat:'',name:'',pres:''});
   const [showManual,setShowManual] = useState(false);
   const [showQuote,setShowQuote] = useState(false);
   const [quoteHtml,setQuoteHtml] = useState('');
   const { crmProjects, crmLoading } = useCRMProjects();
-  const [showTplModal,setShowTplModal] = useState(false);
-  const [editId,setEditId] = useState(null);
+    const [editId,setEditId] = useState(null);
   const [delId,setDelId] = useState(null);
-  const [manItem,setManItem] = useState({code:'',cat:'',name:'',brand:'',unit:'UNIDAD',cost:'',qty:'',pres:'',tsN:'',tsD:'',subline:''});
-
+  const [manItem,setManItem] = useState({code:'',cat:'',name:'',unit:'UNIDAD',cost:'',qty:'',pres:'',tsN:'',tsD:'',subline:''});
   const actTyp = useMemo(()=>typs.find(t=>t.id===actTypId)||typs[0]||defTyp,[typs,actTypId]);
   const nfy = useCallback((m,t='success')=>setNotif({message:m,type:t}),[]);
-
   useEffect(()=>{
     const demoMats = [
       {id:'EST-P01',cat:'ESTRUCTURA',name:'M-01 Panel Frontal (con puerta)',brand:'IMEL',unit:'UNIDAD',cost:35479,baseQty:1,pres:'Panel prearmado'},
@@ -258,78 +180,78 @@ export default function App() {
       {id:'EST-ANGTENS',cat:'ESTRUCTURA',name:'Ángulo Tensor 40x40 L=70mm',brand:'STEELFIX',unit:'UNIDAD',cost:879,baseQty:6,pres:'Pieza'},
       {id:'EST-TLENT',cat:'ESTRUCTURA',name:'Tornillo Lenteja 8-18 x 1/2" (ensamble general)',brand:'STEELFIX',unit:'UNIDAD',cost:9.89,baseQty:1050,pres:'Unidad'},
       {id:'EST-THEX',cat:'ESTRUCTURA',name:'Tornillo Hexagonal 10-16 x 3/4" (fijación base+cielo)',brand:'STEELFIX',unit:'UNIDAD',cost:47,baseQty:250,pres:'Unidad'},
-      {id:'EST-TAPE',cat:'ESTRUCTURA',name:'Max Tape 10x6mm (Rollo 10m)',brand:'',unit:'UNIDAD',cost:11700,baseQty:0.5,pres:'Rollo 10m'},
+      {id:'EST-TAPE',cat:'ESTRUCTURA',name:'Max Tape 10x6mm (Rollo 10m)',unit:'UNIDAD',cost:11700,baseQty:0.5,pres:'Rollo 10m'},
       {id:'EST-TLENT1',cat:'ESTRUCTURA',name:'Tornillo Lenteja 8-18 x 1" (pilares compuestos)',brand:'STEELFIX',unit:'UNIDAD',cost:15,baseQty:100,pres:'Unidad'},
       {id:'BASE-TARIMA',cat:'BASE',name:'Tarima Base POD (placa estructural)',brand:'APPSA',unit:'UNIDAD',cost:290000.0,baseQty:1.0,pres:'Unidad fabricada'},
       {id:'POD_022',cat:'PUERTAS',name:'LISTON IMPREGNADO CEPILLADO 1 1/2 X 2¨',brand:'LIFEWOOD',unit:'UNIDAD',cost:2190.0,baseQty:2.0,pres:'Unidad'},
       {id:'POD_023',cat:'TECHO',name:'TERCIADO ESTRUCTURAL 1220 x 2440 x 9mm',brand:'CONSTRUPLAZA',unit:'UNIDAD',cost:16648.0,baseQty:1.3,pres:'Plancha 1220x2440mm'},
-      {id:'CRI1988',cat:'ELECTRICO',name:'Tubo conduit C-IV 20 mm x 6 mt',brand:'SODIMAC',unit:'UNIDAD',cost:1085.71,baseQty:0.5,pres:'Tubo 6m'},
-      {id:'CRI305',cat:'ELECTRICO',name:'TUBO CONDUIT FLEXIBLE 20 mm (ROLLO 10 m)',brand:'SODIMAC',unit:'MT',cost:790.0,baseQty:0.15,pres:'Rollo 10m'},
-      {id:'CEL042',cat:'ELECTRICO',name:'CAJA DISTRIBUCION TABIQUE NARANJA 16-20mm',brand:'SODIMAC',unit:'UNIDAD',cost:690.0,baseQty:5.0,pres:'Unidad'},
-      {id:'CEL081',cat:'ELECTRICO',name:'SALIDA DE CAJA PVC CONDUIT 20 mm',brand:'SODIMAC',unit:'UNIDAD',cost:120.0,baseQty:12.0,pres:'Unidad'},
+      {id:'CRI1988',cat:'ELECTRICO',name:'Tubo conduit C-IV 20 mm x 6 mt',brand:'S',unit:'UNIDAD',cost:1085.71,baseQty:0.5,pres:'Tubo 6m'},
+      {id:'CRI305',cat:'ELECTRICO',name:'TUBO CONDUIT FLEXIBLE 20 mm (ROLLO 10 m)',brand:'S',unit:'MT',cost:790.0,baseQty:0.15,pres:'Rollo 10m'},
+      {id:'CEL042',cat:'ELECTRICO',name:'CAJA DISTRIBUCION TABIQUE NARANJA 16-20mm',brand:'S',unit:'UNIDAD',cost:690.0,baseQty:5.0,pres:'Unidad'},
+      {id:'CEL081',cat:'ELECTRICO',name:'SALIDA DE CAJA PVC CONDUIT 20 mm',brand:'S',unit:'UNIDAD',cost:120.0,baseQty:12.0,pres:'Unidad'},
       {id:'POD_029',cat:'ELECTRICO',name:'PLACA CIEGA S12 BLANCO',brand:'DARTEL',unit:'UNIDAD',cost:402.0,baseQty:2.0,pres:'Unidad'},
       {id:'POD_030',cat:'ELECTRICO',name:'PLACA INTERRUPTOR 9/12 1M SIMPLE S12 BLANCO',brand:'DARTEL',unit:'UNIDAD',cost:1006.0,baseQty:1.0,pres:'Unidad'},
       {id:'POD_031',cat:'ELECTRICO',name:'PLACA TOMACORRIENTE 10A DOBLE S12 BLANCO',brand:'DARTEL',unit:'UNIDAD',cost:1578.0,baseQty:1.0,pres:'Unidad'},
-      {id:'POD_032',cat:'ELECTRICO',name:'Tortuga ovalada de aluminio IP-44 con rejilla blanca E-27 c/ampolleta led',brand:'',unit:'UNIDAD',cost:4040.0,baseQty:1.0,pres:'Unidad'},
-      {id:'7359861',cat:'ELECTRICO',name:'Curva PVC conduit C-III 20 mm',brand:'SODIMAC',unit:'UNIDAD',cost:110.0,baseQty:7.0,pres:'Unidad'},
-      {id:'POD_034',cat:'ELECTRICO',name:'Alambre de cobre aislado (H07V-U) 1,5 mm2 100 m Blanco',brand:'SODIMAC',unit:'UNIDAD',cost:22530.0,baseQty:0.04,pres:'Rollo 100m'},
-      {id:'POD_035',cat:'ELECTRICO',name:'Alambre de cobre aislado (H07V-U) 1,5 mm2 100 m Rojo',brand:'SODIMAC',unit:'UNIDAD',cost:22530.0,baseQty:0.12,pres:'Rollo 100m'},
-      {id:'POD_036',cat:'ELECTRICO',name:'Alambre de cobre aislado (H07V-U) 1,5 mm2 100 m Verde',brand:'SODIMAC',unit:'UNIDAD',cost:22530.0,baseQty:0.04,pres:'Rollo 100m'},
-      {id:'POD_037',cat:'ELECTRICO',name:'Alambre de cobre aislado (H07V-U) 2,5 mm2 100 m Blanco',brand:'SODIMAC',unit:'UNIDAD',cost:36300.0,baseQty:0.3,pres:'Rollo 100m'},
-      {id:'POD_038',cat:'ELECTRICO',name:'Alambre de cobre aislado (H07V-U) 2,5 mm2 100 m rojo',brand:'SODIMAC',unit:'UNIDAD',cost:36300.0,baseQty:0.3,pres:'Rollo 100m'},
-      {id:'POD_039',cat:'ELECTRICO',name:'Alambre de cobre aislado (H07V-U) 2,5 mm2 100 m Verde',brand:'SODIMAC',unit:'UNIDAD',cost:36300.0,baseQty:0.3,pres:'Rollo 100m'},
-      {id:'CRI2115',cat:'SANITARIO - AGUA POTABLE',name:'Tubo PN-16 PP RCT BETA  20 mmx3 m S.3.2',brand:'SODIMAC',unit:'UNIDAD',cost:2290.0,baseQty:1.0,pres:'Tubo 3m'},
-      {id:'POD_041',cat:'SANITARIO - AGUA POTABLE',name:'Tubo PN-12,5 PP RCT BETA 20 mm x3 m  S4',brand:'SODIMAC',unit:'UNIDAD',cost:2290.0,baseQty:1.0,pres:'Tubo 3m'},
-      {id:'CRI2116',cat:'SANITARIO - AGUA POTABLE',name:'Codo Transicion 90° PPR Gris 20 mm x1/2\" HE',brand:'SODIMAC',unit:'UNIDAD',cost:2490.0,baseQty:2.0,pres:'Unidad'},
-      {id:'CRI2117',cat:'SANITARIO - AGUA POTABLE',name:'Codo Transicion 90° PPR Gris 20 mm x1/2\" HI',brand:'SODIMAC',unit:'UNIDAD',cost:1690.0,baseQty:3.0,pres:'Unidad'},
-      {id:'CRI2118',cat:'SANITARIO - AGUA POTABLE',name:'Codo PPR 90° 20 mm. Gris',brand:'SODIMAC',unit:'UNIDAD',cost:210.0,baseQty:2.0,pres:'Unidad'},
-      {id:'CRI2120',cat:'SANITARIO - AGUA POTABLE',name:'Pasatubo PPR Puente 20 mm',brand:'SODIMAC',unit:'UNIDAD',cost:940.0,baseQty:1.0,pres:'Unidad'},
-      {id:'POD_046',cat:'SANITARIO - AGUA POTABLE',name:'Llave De Paso Cromada PPR 25 mm Vástago 2,3 cm',brand:'SODIMAC',unit:'UNIDAD',cost:8990.0,baseQty:2.0,pres:'Unidad'},
-      {id:'POD_047',cat:'SANITARIO - AGUA POTABLE',name:'Abrazadera PPR Gris 20 mm',brand:'SODIMAC',unit:'UNIDAD',cost:190.0,baseQty:10.0,pres:'Unidad'},
-      {id:'POD_048',cat:'SANITARIO - AGUA POTABLE',name:'Copla Fusión PPR 20 mm',brand:'SODIMAC',unit:'UNIDAD',cost:130.0,baseQty:2.0,pres:'Unidad'},
-      {id:'CRI2121',cat:'SANITARIO - AGUA POTABLE',name:'Tubo PN-16 Gris PP RCT BETA 25 mm x3 m S.3.2',brand:'SODIMAC',unit:'UNIDAD',cost:3490.0,baseQty:1.0,pres:'Tubo 3m'},
-      {id:'POD_050',cat:'SANITARIO - AGUA POTABLE',name:'Tubo PN-12,5 Gris PP RCT BETA 25 mm x3 m S4',brand:'SODIMAC',unit:'UNIDAD',cost:3490.0,baseQty:1.0,pres:'Tubo 3m'},
-      {id:'POD_051',cat:'SANITARIO - AGUA POTABLE',name:'Tee  PPR 25X25X20',brand:'SODIMAC',unit:'UNIDAD',cost:690.0,baseQty:2.0,pres:'Unidad'},
-      {id:'CRI2232',cat:'SANITARIO - AGUA POTABLE',name:'Tee PPR 25X20X25 mm Gris',brand:'SODIMAC',unit:'UNIDAD',cost:990.0,baseQty:1.0,pres:'Unidad'},
+      {id:'POD_032',cat:'ELECTRICO',name:'Tortuga ovalada de aluminio IP-44 con rejilla blanca E-27 c/ampolleta led',unit:'UNIDAD',cost:4040.0,baseQty:1.0,pres:'Unidad'},
+      {id:'7359861',cat:'ELECTRICO',name:'Curva PVC conduit C-III 20 mm',brand:'S',unit:'UNIDAD',cost:110.0,baseQty:7.0,pres:'Unidad'},
+      {id:'POD_034',cat:'ELECTRICO',name:'Alambre de cobre aislado (H07V-U) 1,5 mm2 100 m Blanco',brand:'S',unit:'UNIDAD',cost:22530.0,baseQty:0.04,pres:'Rollo 100m'},
+      {id:'POD_035',cat:'ELECTRICO',name:'Alambre de cobre aislado (H07V-U) 1,5 mm2 100 m Rojo',brand:'S',unit:'UNIDAD',cost:22530.0,baseQty:0.12,pres:'Rollo 100m'},
+      {id:'POD_036',cat:'ELECTRICO',name:'Alambre de cobre aislado (H07V-U) 1,5 mm2 100 m Verde',brand:'S',unit:'UNIDAD',cost:22530.0,baseQty:0.04,pres:'Rollo 100m'},
+      {id:'POD_037',cat:'ELECTRICO',name:'Alambre de cobre aislado (H07V-U) 2,5 mm2 100 m Blanco',brand:'S',unit:'UNIDAD',cost:36300.0,baseQty:0.3,pres:'Rollo 100m'},
+      {id:'POD_038',cat:'ELECTRICO',name:'Alambre de cobre aislado (H07V-U) 2,5 mm2 100 m rojo',brand:'S',unit:'UNIDAD',cost:36300.0,baseQty:0.3,pres:'Rollo 100m'},
+      {id:'POD_039',cat:'ELECTRICO',name:'Alambre de cobre aislado (H07V-U) 2,5 mm2 100 m Verde',brand:'S',unit:'UNIDAD',cost:36300.0,baseQty:0.3,pres:'Rollo 100m'},
+      {id:'CRI2115',cat:'SANITARIO - AGUA POTABLE',name:'Tubo PN-16 PP RCT BETA  20 mmx3 m S.3.2',brand:'S',unit:'UNIDAD',cost:2290.0,baseQty:1.0,pres:'Tubo 3m'},
+      {id:'POD_041',cat:'SANITARIO - AGUA POTABLE',name:'Tubo PN-12,5 PP RCT BETA 20 mm x3 m  S4',brand:'S',unit:'UNIDAD',cost:2290.0,baseQty:1.0,pres:'Tubo 3m'},
+      {id:'CRI2116',cat:'SANITARIO - AGUA POTABLE',name:'Codo Transicion 90° PPR Gris 20 mm x1/2\" HE',brand:'S',unit:'UNIDAD',cost:2490.0,baseQty:2.0,pres:'Unidad'},
+      {id:'CRI2117',cat:'SANITARIO - AGUA POTABLE',name:'Codo Transicion 90° PPR Gris 20 mm x1/2\" HI',brand:'S',unit:'UNIDAD',cost:1690.0,baseQty:3.0,pres:'Unidad'},
+      {id:'CRI2118',cat:'SANITARIO - AGUA POTABLE',name:'Codo PPR 90° 20 mm. Gris',brand:'S',unit:'UNIDAD',cost:210.0,baseQty:2.0,pres:'Unidad'},
+      {id:'CRI2120',cat:'SANITARIO - AGUA POTABLE',name:'Pasatubo PPR Puente 20 mm',brand:'S',unit:'UNIDAD',cost:940.0,baseQty:1.0,pres:'Unidad'},
+      {id:'POD_046',cat:'SANITARIO - AGUA POTABLE',name:'Llave De Paso Cromada PPR 25 mm Vástago 2,3 cm',brand:'S',unit:'UNIDAD',cost:8990.0,baseQty:2.0,pres:'Unidad'},
+      {id:'POD_047',cat:'SANITARIO - AGUA POTABLE',name:'Abrazadera PPR Gris 20 mm',brand:'S',unit:'UNIDAD',cost:190.0,baseQty:10.0,pres:'Unidad'},
+      {id:'POD_048',cat:'SANITARIO - AGUA POTABLE',name:'Copla Fusión PPR 20 mm',brand:'S',unit:'UNIDAD',cost:130.0,baseQty:2.0,pres:'Unidad'},
+      {id:'CRI2121',cat:'SANITARIO - AGUA POTABLE',name:'Tubo PN-16 Gris PP RCT BETA 25 mm x3 m S.3.2',brand:'S',unit:'UNIDAD',cost:3490.0,baseQty:1.0,pres:'Tubo 3m'},
+      {id:'POD_050',cat:'SANITARIO - AGUA POTABLE',name:'Tubo PN-12,5 Gris PP RCT BETA 25 mm x3 m S4',brand:'S',unit:'UNIDAD',cost:3490.0,baseQty:1.0,pres:'Tubo 3m'},
+      {id:'POD_051',cat:'SANITARIO - AGUA POTABLE',name:'Tee  PPR 25X25X20',brand:'S',unit:'UNIDAD',cost:690.0,baseQty:2.0,pres:'Unidad'},
+      {id:'CRI2232',cat:'SANITARIO - AGUA POTABLE',name:'Tee PPR 25X20X25 mm Gris',brand:'S',unit:'UNIDAD',cost:990.0,baseQty:1.0,pres:'Unidad'},
       {id:'POD_053',cat:'SANITARIO - AGUA POTABLE',name:'Codo PPR 90° 25 mm. Gris',brand:'HOFFENS',unit:'UNIDAD',cost:290.0,baseQty:8.0,pres:'Unidad'},
-      {id:'CRI1091',cat:'SANITARIO - AGUA POTABLE',name:'Copla Reducción PPR 25 X 20 mm',brand:'SODIMAC',unit:'UNIDAD',cost:180.0,baseQty:2.0,pres:'Unidad'},
-      {id:'CRI2125',cat:'SANITARIO - AGUA POTABLE',name:'Abrazadera PPR Gris 25 mm',brand:'SODIMAC',unit:'UNIDAD',cost:250.0,baseQty:6.0,pres:'Unidad'},
-      {id:'POD_056',cat:'SANITARIO - AGUA POTABLE',name:'Copla Fusión PPR 25 mm',brand:'SODIMAC',unit:'UNIDAD',cost:190.0,baseQty:2.0,pres:'Unidad'},
-      {id:'CRI2126',cat:'SANITARIO - AGUA POTABLE',name:'Llave Angular Cromada 1/2\"x1/2\" He He',brand:'SODIMAC',unit:'UNIDAD',cost:7090.0,baseQty:1.0,pres:'Unidad'},
-      {id:'CRI680_56',cat:'SANITARIO - INSUMO',name:'MAX TAPE 40X3mm (ROLLO 10M)',brand:'',unit:'UNIDAD',cost:11700.0,baseQty:0.2,pres:'Rollo 10m'},
+      {id:'CRI1091',cat:'SANITARIO - AGUA POTABLE',name:'Copla Reducción PPR 25 X 20 mm',brand:'S',unit:'UNIDAD',cost:180.0,baseQty:2.0,pres:'Unidad'},
+      {id:'CRI2125',cat:'SANITARIO - AGUA POTABLE',name:'Abrazadera PPR Gris 25 mm',brand:'S',unit:'UNIDAD',cost:250.0,baseQty:6.0,pres:'Unidad'},
+      {id:'POD_056',cat:'SANITARIO - AGUA POTABLE',name:'Copla Fusión PPR 25 mm',brand:'S',unit:'UNIDAD',cost:190.0,baseQty:2.0,pres:'Unidad'},
+      {id:'CRI2126',cat:'SANITARIO - AGUA POTABLE',name:'Llave Angular Cromada 1/2\"x1/2\" He He',brand:'S',unit:'UNIDAD',cost:7090.0,baseQty:1.0,pres:'Unidad'},
+      {id:'CRI680_56',cat:'SANITARIO - INSUMO',name:'MAX TAPE 40X3mm (ROLLO 10M)',unit:'UNIDAD',cost:11700.0,baseQty:0.2,pres:'Rollo 10m'},
       {id:'POD_059',cat:'SANITARIO - ALCANTARILLADO',name:'TTEE  110 X 110 mm Bco c/goma',brand:'HOFFENS',unit:'UNIDAD',cost:8790.0,baseQty:2.0,pres:'Unidad'},
       {id:'POD_060',cat:'SANITARIO - ALCANTARILLADO',name:'CODO 45°  110 mm Bco c/goma',brand:'HOFFENS',unit:'UNIDAD',cost:8790.0,baseQty:1.0,pres:'Unidad'},
       {id:'POD_061',cat:'SANITARIO - ALCANTARILLADO',name:'REDUCCION 110 X 50 mm Bco c/goma',brand:'HOFFENS',unit:'UNIDAD',cost:6490.0,baseQty:2.0,pres:'Unidad'},
       {id:'POD_062',cat:'SANITARIO - ALCANTARILLADO',name:'REDUCCION 50 X 40 mm Bco c/goma',brand:'HOFFENS',unit:'UNIDAD',cost:1590.0,baseQty:2.0,pres:'Unidad'},
-      {id:'CRI1868',cat:'SANITARIO - ALCANTARILLADO',name:'Copla PVC-S Bco c/goma 110mm Blanco',brand:'SODIMAC',unit:'UNIDAD',cost:1610.0,baseQty:1.0,pres:'Unidad'},
-      {id:'CRI2134',cat:'SANITARIO - ALCANTARILLADO',name:'Abrazadera PVC-S 110mm Gris',brand:'SODIMAC',unit:'UNIDAD',cost:1690.0,baseQty:2.0,pres:'Unidad'},
-      {id:'CRI2175',cat:'SANITARIO - ALCANTARILLADO',name:'Tubo Blanco PVC Agua 50 mmx300 cm',brand:'SODIMAC',unit:'UNIDAD',cost:7090.0,baseQty:0.33,pres:'Tubo 3m'},
+      {id:'CRI1868',cat:'SANITARIO - ALCANTARILLADO',name:'Copla PVC-S Bco c/goma 110mm Blanco',brand:'S',unit:'UNIDAD',cost:1610.0,baseQty:1.0,pres:'Unidad'},
+      {id:'CRI2134',cat:'SANITARIO - ALCANTARILLADO',name:'Abrazadera PVC-S 110mm Gris',brand:'S',unit:'UNIDAD',cost:1690.0,baseQty:2.0,pres:'Unidad'},
+      {id:'CRI2175',cat:'SANITARIO - ALCANTARILLADO',name:'Tubo Blanco PVC Agua 50 mmx300 cm',brand:'S',unit:'UNIDAD',cost:7090.0,baseQty:0.33,pres:'Tubo 3m'},
       {id:'POD_066',cat:'SANITARIO - ALCANTARILLADO',name:'COPLA PVC-S Bco 50mm',brand:'CONSTRUPLAZA',unit:'UNIDAD',cost:1100.0,baseQty:2.0,pres:'Unidad'},
-      {id:'CRI2134_65',cat:'SANITARIO - ALCANTARILLADO',name:'Abrazadera PVC-S 50mm Gris',brand:'SODIMAC',unit:'UNIDAD',cost:720.0,baseQty:2.0,pres:'Unidad'},
-      {id:'CRI2176',cat:'SANITARIO - ALCANTARILLADO',name:'Tubo Blanco PVC Agua 40 mmx300 cm',brand:'SODIMAC',unit:'UNIDAD',cost:5590.0,baseQty:0.33,pres:'Tubo 3m'},
-      {id:'CRI2171',cat:'SANITARIO - ALCANTARILLADO',name:'Codo 87,5o PVC-S Bco c/goma 40mm Blanco',brand:'SODIMAC',unit:'UNIDAD',cost:590.0,baseQty:2.0,pres:'Unidad'},
-      {id:'CRI2138',cat:'SANITARIO - ALCANTARILLADO',name:'Abrazadera PVC-S 40mm Gris',brand:'SODIMAC',unit:'UNIDAD',cost:742.0,baseQty:2.0,pres:'Unidad'},
+      {id:'CRI2134_65',cat:'SANITARIO - ALCANTARILLADO',name:'Abrazadera PVC-S 50mm Gris',brand:'S',unit:'UNIDAD',cost:720.0,baseQty:2.0,pres:'Unidad'},
+      {id:'CRI2176',cat:'SANITARIO - ALCANTARILLADO',name:'Tubo Blanco PVC Agua 40 mmx300 cm',brand:'S',unit:'UNIDAD',cost:5590.0,baseQty:0.33,pres:'Tubo 3m'},
+      {id:'CRI2171',cat:'SANITARIO - ALCANTARILLADO',name:'Codo 87,5o PVC-S Bco c/goma 40mm Blanco',brand:'S',unit:'UNIDAD',cost:590.0,baseQty:2.0,pres:'Unidad'},
+      {id:'CRI2138',cat:'SANITARIO - ALCANTARILLADO',name:'Abrazadera PVC-S 40mm Gris',brand:'S',unit:'UNIDAD',cost:742.0,baseQty:2.0,pres:'Unidad'},
       {id:'POD_071',cat:'SANITARIO - ALCANTARILLADO',name:'Copla PVC-S Bco 40mm',brand:'HOFFENS',unit:'UNIDAD',cost:1690.0,baseQty:1.0,pres:'Unidad'},
-      {id:'POD_072',cat:'SANITARIO - ALCANTARILLADO',name:'Lubricante para tuberías 500 cc',brand:'SODIMAC',unit:'UNIDAD',cost:2490.0,baseQty:0.1,pres:'Botella 500cc'},
+      {id:'POD_072',cat:'SANITARIO - ALCANTARILLADO',name:'Lubricante para tuberías 500 cc',brand:'S',unit:'UNIDAD',cost:2490.0,baseQty:0.1,pres:'Botella 500cc'},
       {id:'POD_073',cat:'SANITARIO - ALCANTARILLADO',name:'Tornillo 12-14 x 1 1/4¨cabeza hexagonal punta broca flange galvanizado  con g...',brand:'STEELFIX',unit:'UNIDAD',cost:30.0,baseQty:2.0,pres:'Unidad'},
-      {id:'CSA148',cat:'SANITARIO',name:'Capuchón de goma 40 mm',brand:'SODIMAC',unit:'UNIDAD',cost:1290.0,baseQty:1.0,pres:'Unidad'},
-      {id:'POD_075',cat:'SANITARIO - ARTEFACTOS INSUMOS',name:'Teflón para gas 1/2\" 10 m',brand:'SODIMAC',unit:'UNIDAD',cost:1890.0,baseQty:0.25,pres:'Rollo 10m'},
-      {id:'POD_076',cat:'SANITARIO - ALCANTARILLADO',name:'ZOCALO SANITARIO BP-01 ACRILICO BLANCO - AISLADO',brand:'SODIMAC',unit:'UNIDAD',cost:44600.0,baseQty:1.0,pres:'Unidad fabricada'},
-      {id:'POD_077',cat:'SANITARIO - INSUMO',name:'Adhesivo PVC 237 ml Tradicional Profesional',brand:'SODIMAC',unit:'UNIDAD',cost:4890.0,baseQty:0.25,pres:'Pote 237ml'},
-      {id:'POD_078',cat:'ARTEFACTO BAÑO - INSUMOS',name:'Sello para tina PVC 25 mm',brand:'SODIMAC',unit:'UNIDAD',cost:14990.0,baseQty:1.5,pres:'Tira'},
-      {id:'POD_079',cat:'SANITARIO - INSUMO',name:'Silicona Acética Blanca con Fungicida Rex Cartucho 300 ml',brand:'SODIMAC',unit:'UNIDAD',cost:4590.0,baseQty:1.0,pres:'Cartucho 300ml'},
-      {id:'POD_080',cat:'SANITARIO - INSUMO',name:'Sellador acrílico 300 ml blanco',brand:'SODIMAC',unit:'UNIDAD',cost:4590.0,baseQty:1.0,pres:'Cartucho 300ml'},
-      {id:'POD_081',cat:'PANEL MURO',name:'YESOCARTÓN ST 12,5 MM 1200X2400MM',brand:'',unit:'UNIDAD',cost:6106.0,baseQty:4.0,pres:'Plancha 1200x2400',revRole:'revST125'},
-      {id:'CRI1916',cat:'PANEL MURO',name:'YESO CARTON RH 12,5mm 1200 X 2400mm',brand:'',unit:'UNIDAD',cost:9134.0,baseQty:6.0,pres:'Plancha 1200x2400',revRole:'revRH125'},
-      {id:'CRI1916_81',cat:'PANEL MURO',name:'YESO CARTON RF 12,5mm 1200 X 2400mm',brand:'',unit:'UNIDAD',cost:9134.0,baseQty:4.0,pres:'Plancha 1200x2400',revRole:'revRF125'},
-      {id:'CRI010',cat:'PANEL MURO',name:'YESOCARTÓN ST 10 MM 1200X2400MM',brand:'',unit:'UNIDAD',cost:4176.0,baseQty:2.0,pres:'Plancha 1200x2400',revRole:'revST10'},
-      {id:'POD_085',cat:'PANEL MURO',name:'FIBRO CEMENTO LISO 6mm 1200 X 2400mm',brand:'',unit:'UNIDAD',cost:9134.0,baseQty:0.5,pres:'Plancha 1200x2400',revRole:'revFibro'},
-      {id:'POD_086',cat:'PANEL MURO - INSUMO',name:'Espuma niveladora 3mm x 10m',brand:'SODIMAC',unit:'UNIDAD',cost:11990.0,baseQty:0.2,pres:'Unidad'},
+      {id:'CSA148',cat:'SANITARIO',name:'Capuchón de goma 40 mm',brand:'S',unit:'UNIDAD',cost:1290.0,baseQty:1.0,pres:'Unidad'},
+      {id:'POD_075',cat:'SANITARIO - ARTEFACTOS INSUMOS',name:'Teflón para gas 1/2\" 10 m',brand:'S',unit:'UNIDAD',cost:1890.0,baseQty:0.25,pres:'Rollo 10m'},
+      {id:'POD_076',cat:'SANITARIO - ALCANTARILLADO',name:'ZOCALO SANITARIO BP-01 ACRILICO BLANCO - AISLADO',brand:'S',unit:'UNIDAD',cost:44600.0,baseQty:1.0,pres:'Unidad fabricada'},
+      {id:'POD_077',cat:'SANITARIO - INSUMO',name:'Adhesivo PVC 237 ml Tradicional Profesional',brand:'S',unit:'UNIDAD',cost:4890.0,baseQty:0.25,pres:'Pote 237ml'},
+      {id:'POD_078',cat:'ARTEFACTO BAÑO - INSUMOS',name:'Sello para tina PVC 25 mm',brand:'S',unit:'UNIDAD',cost:14990.0,baseQty:1.5,pres:'Tira'},
+      {id:'POD_079',cat:'SANITARIO - INSUMO',name:'Silicona Acética Blanca con Fungicida Rex Cartucho 300 ml',brand:'S',unit:'UNIDAD',cost:4590.0,baseQty:1.0,pres:'Cartucho 300ml'},
+      {id:'POD_080',cat:'SANITARIO - INSUMO',name:'Sellador acrílico 300 ml blanco',brand:'S',unit:'UNIDAD',cost:4590.0,baseQty:1.0,pres:'Cartucho 300ml'},
+      {id:'POD_081',cat:'PANEL MURO',name:'YESOCARTÓN ST 12,5 MM 1200X2400MM',unit:'UNIDAD',cost:6106.0,baseQty:4.0,pres:'Plancha 1200x2400',revRole:'revST125'},
+      {id:'CRI1916',cat:'PANEL MURO',name:'YESO CARTON RH 12,5mm 1200 X 2400mm',unit:'UNIDAD',cost:9134.0,baseQty:6.0,pres:'Plancha 1200x2400',revRole:'revRH125'},
+      {id:'CRI1916_81',cat:'PANEL MURO',name:'YESO CARTON RF 12,5mm 1200 X 2400mm',unit:'UNIDAD',cost:9134.0,baseQty:4.0,pres:'Plancha 1200x2400',revRole:'revRF125'},
+      {id:'CRI010',cat:'PANEL MURO',name:'YESOCARTÓN ST 10 MM 1200X2400MM',unit:'UNIDAD',cost:4176.0,baseQty:2.0,pres:'Plancha 1200x2400',revRole:'revST10'},
+      {id:'POD_085',cat:'PANEL MURO',name:'FIBRO CEMENTO LISO 6mm 1200 X 2400mm',unit:'UNIDAD',cost:9134.0,baseQty:0.5,pres:'Plancha 1200x2400',revRole:'revFibro'},
+      {id:'POD_086',cat:'PANEL MURO - INSUMO',name:'Espuma niveladora 3mm x 10m',brand:'S',unit:'UNIDAD',cost:11990.0,baseQty:0.2,pres:'Unidad'},
       {id:'POD_087',cat:'PANEL MURO - INSUMO',name:'Tornillo B-Phillips zincado punta broca 6 - 20 x 1 5/8¨ (000-171)',brand:'STEELFIX',unit:'UNIDAD',cost:5.4,baseQty:125.0,pres:'Unidad'},
       {id:'CRI1170',cat:'PANEL MURO - INSUMO',name:'Tornillo B-Phillips zincado punta broca 6 - 20 x 1 1/4¨ (000-168)',brand:'STEELFIX',unit:'UNIDAD',cost:5.4,baseQty:400.0,pres:'Unidad'},
-      {id:'CRI306',cat:'PANEL MURO - INSUMO',name:'JuntaPro Volcan® 10cm x 45m',brand:'SODIMAC',unit:'UNIDAD',cost:4228.0,baseQty:1.0,pres:'Rollo 45m'},
-      {id:'CRI046',cat:'PANEL MURO - INSUMO',name:'Masilla base junta PRO 25 kg',brand:'SODIMAC',unit:'UNIDAD',cost:20990.0,baseQty:0.5,pres:'Saco 25kg'},
-      {id:'POD_091',cat:'TERMINACION MURO - INSUMO',name:'Pasta para muro de interior 25 kg',brand:'SODIMAC',unit:'UNIDAD',cost:17900.0,baseQty:0.5,pres:'Saco 25kg',termGroup:'pintura'},
+      {id:'CRI306',cat:'PANEL MURO - INSUMO',name:'JuntaPro Volcan® 10cm x 45m',brand:'S',unit:'UNIDAD',cost:4228.0,baseQty:1.0,pres:'Rollo 45m'},
+      {id:'CRI046',cat:'PANEL MURO - INSUMO',name:'Masilla base junta PRO 25 kg',brand:'S',unit:'UNIDAD',cost:20990.0,baseQty:0.5,pres:'Saco 25kg'},
+      {id:'POD_091',cat:'TERMINACION MURO - INSUMO',name:'Pasta para muro de interior 25 kg',brand:'S',unit:'UNIDAD',cost:17900.0,baseQty:0.5,pres:'Saco 25kg',termGroup:'pintura'},
       {id:'POD_092',cat:'TERMINACION MURO - INSUMO',name:'CAVE POLFLEX - F BALDE 20 KG',brand:'CAVE',unit:'UNIDAD',cost:64600.0,baseQty:0.33,pres:'Balde 20kg'},
       {id:'POD_093',cat:'PANEL MURO - INSUMO',name:'dymonic FC blanco',brand:'CAVE',unit:'UNIDAD',cost:3150.0,baseQty:3.0,pres:'Cartucho'},
       {id:'POD_094',cat:'PANEL MURO - INSUMO',name:'dymonic FC gris',brand:'CAVE',unit:'UNIDAD',cost:3150.0,baseQty:1.0,pres:'Cartucho'},
@@ -337,10 +259,9 @@ export default function App() {
       {id:'CRI2184',cat:'PANEL MURO - INSUMO',name:'VOLCAN WRAP BARRERA DE VAPOR',brand:'volcan',unit:'MT',cost:792.76,baseQty:2.0,pres:'Metro lineal'},
       {id:'CRI2185',cat:'PANEL MURO - INSUMO',name:'VOLCAN WRAP MURO',brand:'volcan',unit:'MT',cost:1086.12,baseQty:3.0,pres:'Metro lineal'},
       {id:'POD_098',cat:'PANEL MURO - INSUMO',name:'Cinta Construcción VolcanWrap 50,29 m',brand:'volcan',unit:'UNIDAD',cost:20090.0,baseQty:0.2,pres:'Rollo 50m'},
-      {id:'POD_099',cat:'TERMINACION MURO - INSUMO',name:'Adhesivo cerámico BECKRON BLANCO INVIERNO A.C',brand:'',unit:'UNIDAD',cost:10950.0,baseQty:2.5,pres:'Saco 25kg',termGroup:'ceramica'},
-      {id:'POD_100',cat:'TERMINACION MURO - INSUMO',name:'Espaciador 2 mm con tomador',brand:'SODIMAC',unit:'UNIDAD',cost:2290.0,baseQty:0.5,pres:'Unidad',termGroup:'ceramica'},
-      {id:'CTE042',cat:'TERMINACION MURO - INSUMO',name:'Fragüe piso/muro blanco 5kg BECKRON',brand:'SODIMAC',unit:'UNIDAD',cost:2290.0,baseQty:2.0,pres:'Saco 5kg',termGroup:'ceramica'},
-
+      {id:'POD_099',cat:'TERMINACION MURO - INSUMO',name:'Adhesivo cerámico BECKRON BLANCO INVIERNO A.C',unit:'UNIDAD',cost:10950.0,baseQty:2.5,pres:'Saco 25kg',termGroup:'ceramica'},
+      {id:'POD_100',cat:'TERMINACION MURO - INSUMO',name:'Espaciador 2 mm con tomador',brand:'S',unit:'UNIDAD',cost:2290.0,baseQty:0.5,pres:'Unidad',termGroup:'ceramica'},
+      {id:'CTE042',cat:'TERMINACION MURO - INSUMO',name:'Fragüe piso/muro blanco 5kg BECKRON',brand:'S',unit:'UNIDAD',cost:2290.0,baseQty:2.0,pres:'Saco 5kg',termGroup:'ceramica'},
       {id:'CRI1170_101',cat:'CIELO - INSUMO',name:'Tornillo B-Phillips zincado punta broca 6 - 20 x 1 1/4¨ (000-168)',brand:'STEELFIX',unit:'UNIDAD',cost:5.4,baseQty:100.0,pres:'Unidad'},
       {id:'BASE-CUARZ',cat:'BASE',name:'TX-Cuarz PRO (puente adherente 2 capas)',brand:'Grupo TX',unit:'UNIDAD',cost:55000.0,baseQty:0.1,pres:'Tineta 20kg'},
       {id:'BASE-MORTERO',cat:'BASE',name:'TX-Mortero Autonivelante con Fibra (saco 25kg)',brand:'Grupo TX',unit:'UNIDAD',cost:10140.0,baseQty:1.5,pres:'Saco 25kg'},
@@ -348,26 +269,26 @@ export default function App() {
       {id:'CRI1214',cat:'TERMINACION CIELO - INSUMO',name:'ILLBRUCK PU010 ESPUMA ADHESIVA Lata 750ml',brand:'CAVE',unit:'UNIDAD',cost:6800.0,baseQty:0.5,pres:'Lata 750ml'},
       {id:'CRI1215',cat:'TERMINACION CIELO - INSUMO',name:'ILLBRUCK AA290 LIMPIADOR MILTIUSOS',brand:'CAVE',unit:'UNIDAD',cost:1220.0,baseQty:0.25,pres:'Botella'},
       {id:'CRI1299',cat:'TERMINACION CIELO - INSUMO',name:'ILLBRUCK Boquillas AA 210',brand:'CAVE',unit:'UNIDAD',cost:437.0,baseQty:1.0,pres:'Unidad'},
-      {id:'POD_110',cat:'INSUMOS GENERALES',name:'RODILLO DE PUAS',brand:'',unit:'UNIDAD',cost:81900.0,baseQty:0.02,pres:'Unidad'},
-      {id:'POD_111',cat:'INSUMOS GENERALES',name:'Pintura en Spray Amarillo Fiesta 400ml',brand:'SODIMAC',unit:'UNIDAD',cost:7000.0,baseQty:0.15,pres:'Spray 400ml'},
-      {id:'POD_112',cat:'INSUMOS GENERALES',name:'Cinta Aisladora Eléctrica Alto Desempeño 19 mm x 9 m Negra',brand:'SODIMAC',unit:'UNIDAD',cost:1990.0,baseQty:0.5,pres:'Rollo 9m'},
-      {id:'POD_113',cat:'INSUMOS GENERALES',name:'Cinta Aisladora Eléctrica Alto Desempeño 19 mm x 9 m ROJO',brand:'SODIMAC',unit:'UNIDAD',cost:2388.0,baseQty:0.14,pres:'Rollo 9m'},
-      {id:'POD_114',cat:'INSUMOS GENERALES',name:'Cinta Aisladora Eléctrica Alto Desempeño 19 mm x 9 m AZUL',brand:'SODIMAC',unit:'UNIDAD',cost:2388.0,baseQty:0.14,pres:'Rollo 9m'},
-      {id:'POD_115',cat:'INSUMOS GENERALES',name:'Cinta Aisladora Eléctrica Alto Desempeño 19 mm x 9 m VERDE',brand:'SODIMAC',unit:'UNIDAD',cost:2388.0,baseQty:0.14,pres:'Rollo 9m'},
-      {id:'POD_116',cat:'INSUMOS GENERALES',name:'Cinta Aisladora Eléctrica Alto Desempeño 19 mm x 9 m BLANCO',brand:'SODIMAC',unit:'UNIDAD',cost:2388.0,baseQty:0.14,pres:'Rollo 9m'},
-      {id:'POD_117',cat:'INSUMOS GENERALES',name:'Cinta para enmascarar 48 mm 40 m',brand:'SODIMAC',unit:'UNIDAD',cost:2090.0,baseQty:2.0,pres:'Rollo 40m'},
-      {id:'POD_118',cat:'EMBALAJE',name:'ROLLO FILM STRETCH NAT USO MANUAL 50*20',brand:'',unit:'UNIDAD',cost:24489.0,baseQty:1.0,pres:'Rollo'},
-      {id:'POD_119',cat:'EMBALAJE',name:'Polietileno negro 4x25 m standard',brand:'',unit:'UNIDAD',cost:4750.0,baseQty:0.5,pres:'Rollo 4x25m'},
-      {id:'POD_120',cat:'EMBALAJE',name:'Cinta Adhesiva para embalaje transparente 48 mm x 40 mts',brand:'SODIMAC',unit:'UNIDAD',cost:1690.0,baseQty:1.0,pres:'Rollo 40m'},
+      {id:'POD_110',cat:'INSUMOS GENERALES',name:'RODILLO DE PUAS',unit:'UNIDAD',cost:81900.0,baseQty:0.02,pres:'Unidad'},
+      {id:'POD_111',cat:'INSUMOS GENERALES',name:'Pintura en Spray Amarillo Fiesta 400ml',brand:'S',unit:'UNIDAD',cost:7000.0,baseQty:0.15,pres:'Spray 400ml'},
+      {id:'POD_112',cat:'INSUMOS GENERALES',name:'Cinta Aisladora Eléctrica Alto Desempeño 19 mm x 9 m Negra',brand:'S',unit:'UNIDAD',cost:1990.0,baseQty:0.5,pres:'Rollo 9m'},
+      {id:'POD_113',cat:'INSUMOS GENERALES',name:'Cinta Aisladora Eléctrica Alto Desempeño 19 mm x 9 m ROJO',brand:'S',unit:'UNIDAD',cost:2388.0,baseQty:0.14,pres:'Rollo 9m'},
+      {id:'POD_114',cat:'INSUMOS GENERALES',name:'Cinta Aisladora Eléctrica Alto Desempeño 19 mm x 9 m AZUL',brand:'S',unit:'UNIDAD',cost:2388.0,baseQty:0.14,pres:'Rollo 9m'},
+      {id:'POD_115',cat:'INSUMOS GENERALES',name:'Cinta Aisladora Eléctrica Alto Desempeño 19 mm x 9 m VERDE',brand:'S',unit:'UNIDAD',cost:2388.0,baseQty:0.14,pres:'Rollo 9m'},
+      {id:'POD_116',cat:'INSUMOS GENERALES',name:'Cinta Aisladora Eléctrica Alto Desempeño 19 mm x 9 m BLANCO',brand:'S',unit:'UNIDAD',cost:2388.0,baseQty:0.14,pres:'Rollo 9m'},
+      {id:'POD_117',cat:'INSUMOS GENERALES',name:'Cinta para enmascarar 48 mm 40 m',brand:'S',unit:'UNIDAD',cost:2090.0,baseQty:2.0,pres:'Rollo 40m'},
+      {id:'POD_118',cat:'EMBALAJE',name:'ROLLO FILM STRETCH NAT USO MANUAL 50*20',unit:'UNIDAD',cost:24489.0,baseQty:1.0,pres:'Rollo'},
+      {id:'POD_119',cat:'EMBALAJE',name:'Polietileno negro 4x25 m standard',unit:'UNIDAD',cost:4750.0,baseQty:0.5,pres:'Rollo 4x25m'},
+      {id:'POD_120',cat:'EMBALAJE',name:'Cinta Adhesiva para embalaje transparente 48 mm x 40 mts',brand:'S',unit:'UNIDAD',cost:1690.0,baseQty:1.0,pres:'Rollo 40m'},
       {id:'POD_121',cat:'ARTEFACTO BAÑO',name:'Tina con Antideslizante 70x130 cm Rectangular Acero Esmaltado',brand:'FANALOZA',unit:'UNIDAD',cost:92990.0,baseQty:1.0,pres:'Unidad',slot:'tina'},
-      {id:'POD_122',cat:'ARTEFACTO BAÑO',name:'Desague Tina Plástico 1 1/2\" c/Rebalse c/Sifón HOFFENS',brand:'SODIMAC',unit:'UNIDAD',cost:8190.0,baseQty:1.0,pres:'Unidad'},
+      {id:'POD_122',cat:'ARTEFACTO BAÑO',name:'Desague Tina Plástico 1 1/2\" c/Rebalse c/Sifón HOFFENS',brand:'S',unit:'UNIDAD',cost:8190.0,baseQty:1.0,pres:'Unidad'},
       {id:'POD_123',cat:'ARTEFACTO BAÑO',name:'Sifón PVC 1 1/4\" 66 cm',brand:'FANALOZA',unit:'UNIDAD',cost:4880.0,baseQty:1.0,pres:'Unidad'},
       {id:'POD_124',cat:'ARTEFACTO BAÑO',name:'SOPORTE DE TINA STANDARD D25 H13',brand:'FANALOZA',unit:'UNIDAD',cost:12650.0,baseQty:1.0,pres:'Unidad'},
       {id:'POD_125',cat:'ARTEFACTO BAÑO',name:'Celosía Ventilación 30x30cm Nova Clip Blanco',brand:'DVP',unit:'UNIDAD',cost:12650.0,baseQty:1.0,pres:'Unidad'},
       {id:'POD_126',cat:'ARTEFACTO BAÑO',name:'LAVAMANOS NEW VERONA 5 LT BLANCO',brand:'FANALOZA',unit:'UNIDAD',cost:16200.0,baseQty:1.0,pres:'Unidad',slot:'lavamanos'},
       {id:'POD_127',cat:'ARTEFACTO BAÑO',name:'PEDESTAL UNIVERSAL BLANCO',brand:'FANALOZA',unit:'UNIDAD',cost:12410.0,baseQty:1.0,pres:'Unidad',slot:'pedestal'},
       {id:'POD_128',cat:'ARTEFACTO BAÑO',name:'KIT INSTALACION LAVAMANOS UNIVERSAL',brand:'FANALOZA',unit:'UNIDAD',cost:7870.0,baseQty:1.0,pres:'Kit'},
-      {id:'CSA032',cat:'ARTEFACTO BAÑO',name:'UÑETA LARGA DE ACERO PARA LAVAMANOS',brand:'SODIMAC',unit:'UNIDAD',cost:1779.0,baseQty:1.0,pres:'Unidad'},
+      {id:'CSA032',cat:'ARTEFACTO BAÑO',name:'UÑETA LARGA DE ACERO PARA LAVAMANOS',brand:'S',unit:'UNIDAD',cost:1779.0,baseQty:1.0,pres:'Unidad'},
       {id:'POD_130',cat:'ARTEFACTO BAÑO',name:'SS.\' Krone-N tanque sin mecanismo, Bath Co',brand:'CHC',unit:'UNIDAD',cost:24614.0,baseQty:1.0,pres:'Unidad',slot:'wc_tanque'},
       {id:'POD_131',cat:'ARTEFACTO BAÑO',name:'SS.\' Krone-N taza WC salida dual sin fijacion, Bath Co.',brand:'CHC',unit:'UNIDAD',cost:24614.0,baseQty:1.0,pres:'Unidad',slot:'wc_taza'},
       {id:'POD_132',cat:'ARTEFACTO BAÑO',name:'SS.\' Akim, Krone, Krone-N, Lofty y Magnet asiento y tapa plastica instal. su...',brand:'CHC',unit:'UNIDAD',cost:7866.0,baseQty:1.0,pres:'Unidad',slot:'wc_asiento'},
@@ -376,15 +297,15 @@ export default function App() {
       {id:'POD_135',cat:'ARTEFACTO BAÑO',name:'MM LAVAMANOS ANDES CROMADO',brand:'FANALOZA',unit:'UNIDAD',cost:11950.0,baseQty:1.0,pres:'Unidad',slot:'grif_lav'},
       {id:'POD_136',cat:'ARTEFACTO BAÑO',name:'MM TINA DUCHA ANDES CROMADO',brand:'FANALOZA',unit:'UNIDAD',cost:21480.0,baseQty:1.0,pres:'Unidad',slot:'grif_tina'},
       {id:'POD_137',cat:'ARTEFACTO BAÑO',name:'Extractor Baño Reton 100 BTH',brand:'JONAS',unit:'UNIDAD',cost:49990.0,baseQty:1.0,pres:'Unidad',slot:'extractor'},
-      {id:'POD_138',cat:'TERMINACION PISO',pisoGroup:'ceramica',name:'Cerámica 30x30 cm America blanco caja 2,34 mt2',brand:'IMPERIAL',unit:'UNIDAD',cost:17590.0,baseQty:4.0,pres:'Caja 2,34m²'},
-      {id:'POD_139',cat:'TERMINACION MURO',name:'Esquinero cerámico 8 mm 2,5 m',brand:'SODIMAC',unit:'UNIDAD',cost:9990.0,baseQty:2.0,pres:'Tira 2,5m',termGroup:'ceramica'},
+      {id:'POD_138',cat:'TERMINACION PISO',pisoGroup:'ceramica',name:'Cerámica 30x30 cm America blanco caja 2,34 mt2',brand:'I',unit:'UNIDAD',cost:17590.0,baseQty:4.0,pres:'Caja 2,34m²'},
+      {id:'POD_139',cat:'TERMINACION MURO',name:'Esquinero cerámico 8 mm 2,5 m',brand:'S',unit:'UNIDAD',cost:9990.0,baseQty:2.0,pres:'Tira 2,5m',termGroup:'ceramica'},
       {id:'POD_140',cat:'TERMINACION MURO',name:'Guardapolvo EPS Recto Blanco 1,3x8x220 cm',brand:'AB KÜPFER',unit:'UNIDAD',cost:3570.0,baseQty:1.0,pres:'Tira 220cm'},
-      {id:'POD_141',cat:'TERMINACION MURO',name:'Molduras poliestireno extruido LX25',brand:'SODIMAC',unit:'UNIDAD',cost:2190.0,baseQty:5.0,pres:'Tira'},
-      {id:'POD_142',cat:'TERMINACION MURO',name:'LATEX SKT BLANCO (TINA 4GL)',brand:'SODIMAC',unit:'UNIDAD',cost:69159.0,baseQty:0.25,pres:'Tineta 4GL',termGroup:'pintura_latex'},
-      {id:'POD_143',cat:'TERMINACION MURO',name:'ESMALTE AL AGUA EAA RL KP CONSTRUCCION SATIN BCO (TIP 5GL)',brand:'SODIMAC',unit:'UNIDAD',cost:72900.0,baseQty:0.2,pres:'Tineta 5GL',termGroup:'pintura_esmalte'},
-      {id:'POD_144',cat:'PUERTAS',slot:'puerta',name:'PUERTA PRECOLGADA HOJA 700mm, PREPINTADA COLOR BLANCO, MARCO 30X90X2000 CON C...',brand:'SODIMAC',unit:'UNIDAD',cost:50000.0,baseQty:1.0,pres:'Unidad precolgada'},
-      {id:'POD_145',cat:'PUERTAS',slot:'cerradura',name:'Cerradura Cilíndrica Odis 201 BAÑO - Plata',brand:'SODIMAC',unit:'UNIDAD',cost:13990.0,baseQty:1.0,pres:'Unidad'},
-      {id:'POD_146',cat:'PUERTAS',name:'Tope de puerta recto Níquel satinado Särk Design',brand:'SODIMAC',unit:'UNIDAD',cost:3990.0,baseQty:1.0,pres:'Unidad'},
+      {id:'POD_141',cat:'TERMINACION MURO',name:'Molduras poliestireno extruido LX25',brand:'S',unit:'UNIDAD',cost:2190.0,baseQty:5.0,pres:'Tira'},
+      {id:'POD_142',cat:'TERMINACION MURO',name:'LATEX SKT BLANCO (TINA 4GL)',brand:'S',unit:'UNIDAD',cost:69159.0,baseQty:0.25,pres:'Tineta 4GL',termGroup:'pintura_latex'},
+      {id:'POD_143',cat:'TERMINACION MURO',name:'ESMALTE AL AGUA EAA RL KP CONSTRUCCION SATIN BCO (TIP 5GL)',brand:'S',unit:'UNIDAD',cost:72900.0,baseQty:0.2,pres:'Tineta 5GL',termGroup:'pintura_esmalte'},
+      {id:'POD_144',cat:'PUERTAS',slot:'puerta',name:'PUERTA PRECOLGADA HOJA 700mm, PREPINTADA COLOR BLANCO, MARCO 30X90X2000 CON C...',brand:'S',unit:'UNIDAD',cost:50000.0,baseQty:1.0,pres:'Unidad precolgada'},
+      {id:'POD_145',cat:'PUERTAS',slot:'cerradura',name:'Cerradura Cilíndrica Odis 201 BAÑO - Plata',brand:'S',unit:'UNIDAD',cost:13990.0,baseQty:1.0,pres:'Unidad'},
+      {id:'POD_146',cat:'PUERTAS',name:'Tope de puerta recto Níquel satinado Särk Design',brand:'S',unit:'UNIDAD',cost:3990.0,baseQty:1.0,pres:'Unidad'},
       {id:'CRI521',cat:'PUERTAS - INSUMO',name:'TORNILLO B-PHILLIPS ZINCADO PUNTA BROCA 8-18 x 3\"',brand:'STEELFIX',unit:'UNIDAD',cost:55.22,baseQty:55.0,pres:'Unidad'},
       {id:'POD_148',cat:'TERMINACION BASE - INSUMO',name:'PIntura epoxica 2 compuestos 1GL',brand:'TRICOLOR',unit:'UNIDAD',cost:40072.0,baseQty:0.17,pres:'Galón'},
       {id:'POD_149',cat:'TERMINACION BASE - INSUMO',name:'diluyente Epoxico passol 1 lt',brand:'TRICOLOR',unit:'UNIDAD',cost:3350.0,baseQty:1.0,pres:'Botella 1L'},
@@ -392,14 +313,12 @@ export default function App() {
       {id:'POD_151',cat:'INSUMOS GENERALES',name:'Tornillo B-Phillips zincado punta fina 6 - 18 x 1 1/4¨',brand:'TRICOLOR',unit:'UNIDAD',cost:50.0,baseQty:10.0,pres:'Unidad'},
       {id:'POD_152',cat:'INSUMOS GENERALES',name:'ADHESIVO ESTRUCTURAL Y TAPAGOTERAS GRIS 280 ML (TODO EN 1)',brand:'Mr. build',unit:'UNIDAD',cost:3400.0,baseQty:0.33,pres:'Cartucho 280ml'},
       {id:'POD_153',cat:'INSUMOS GENERALES',name:'Tarugo de nylon 5 mm 100 unidades',brand:'Mr. build',unit:'UNIDAD',cost:3400.0,baseQty:0.09,pres:'Bolsa 100un'},
-      {id:'POD_154',cat:'INSUMOS GENERALES',name:'Golilla Plana Zincada 1/4 (100 Unidades)',brand:'SODIMAC',unit:'UNIDAD',cost:6890.0,baseQty:0.04,pres:'Bolsa 100un'}
+      {id:'POD_154',cat:'INSUMOS GENERALES',name:'Golilla Plana Zincada 1/4 (100 Unidades)',brand:'S',unit:'UNIDAD',cost:6890.0,baseQty:0.04,pres:'Bolsa 100un'}
     ];
     setMats(demoMats.map(m => ({ waste:0,laborY:0,laborC:0,techSheetName:'',techSheetData:'',...m, catOriginal: m.cat, cat: classifyToStage(m.cat) })));
     nfy("BOM Baumax cargado: 153 ítems reales con precios y cantidades comerciales por POD.");
   },[]);
-
   useEffect(()=>{if(notif){const t=setTimeout(()=>setNotif(null),4000);return()=>clearTimeout(t);}},[notif]);
-
   const saveToCRM = async()=>{
     setBusy(true);
     try{
@@ -411,7 +330,7 @@ export default function App() {
       const typPriceRows=typs.map(t=>{const m=calc.typMetrics[t.id]||{};const ppod=calc.totals.salePricePerPod;return `<tr><td style="padding:12px 16px;border-bottom:1px solid #e5e2db;font-weight:500">${t.name}</td><td style="padding:12px 16px;text-align:center;border-bottom:1px solid #e5e2db">${t.count}</td><td style="padding:12px 16px;text-align:right;border-bottom:1px solid #e5e2db">${fmtN(m.floorArea||0)} m\u00b2</td><td style="padding:12px 16px;text-align:right;border-bottom:1px solid #e5e2db;font-weight:600">${fmtC(ppod)}</td><td style="padding:12px 16px;text-align:right;border-bottom:1px solid #e5e2db;font-weight:600">${fmtC(ppod*t.count)}</td></tr>`;}).join('');
       const cotNum='COT-'+Date.now().toString(36).toUpperCase().slice(-6);
       const html=`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Cotizaci\u00f3n ${cotNum} - MAYU</title><style>@page{size:A4;margin:18mm}body{font-family:'Segoe UI',system-ui,sans-serif;color:#2c2c2a;margin:0;padding:40px;max-width:820px;margin:0 auto;font-size:14px;line-height:1.5}table{width:100%;border-collapse:collapse}.hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:30px;padding-bottom:20px;border-bottom:3px solid #D4A44C}.logo-area{display:flex;align-items:center;gap:14px}.brand{font-size:26px;font-weight:700;color:#D4A44C;letter-spacing:1px}.sub{font-size:11px;color:#8B8B5B;text-transform:uppercase;letter-spacing:2px;margin-top:2px}.meta{text-align:right;font-size:12px;color:#666;line-height:1.8}.meta b{color:#2c2c2a;font-size:13px}.sec{margin:28px 0}.sec-t{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:2px;color:#8B8B5B;margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid #e5e2db}th{background:#f8f6f0;padding:10px 16px;text-align:left;font-size:11px;text-transform:uppercase;color:#8B8B5B;border-bottom:2px solid #e5e2db;font-weight:600}.tot-row td{background:#f8f6f0;font-weight:700;font-size:15px;padding:14px 16px}.kpi{display:flex;gap:16px;margin:24px 0}.kpi-box{flex:1;background:#f8f6f0;border-radius:12px;padding:24px 16px;text-align:center}.kpi-v{font-size:22px;font-weight:700;color:#2c2c2a}.kpi-vg{font-size:26px;font-weight:700;color:#D4A44C}.kpi-l{font-size:10px;color:#8B8B5B;text-transform:uppercase;margin-top:6px;letter-spacing:1px}.kpi-s{font-size:11px;color:#999;margin-top:2px}.client-box{background:#faf9f6;border:1px solid #e5e2db;border-radius:10px;padding:16px 20px;margin:20px 0;font-size:13px;line-height:1.8}.client-box b{color:#2c2c2a}.foot{margin-top:40px;padding-top:16px;border-top:2px solid #e5e2db;font-size:11px;color:#999;text-align:center;line-height:1.8}.note{background:#faf9f6;border-left:3px solid #D4A44C;padding:12px 16px;margin:20px 0;font-size:12px;color:#666;line-height:1.7}</style></head><body>
-<div class="hdr"><div class="logo-area"><img src="${MAYU_LOGO}" style="width:56px;height:56px;border-radius:6px"/><div><div class="brand">MAYU</div><div class="sub">Cotizaci\u00f3n de PODs</div></div></div><div class="meta"><b>${cotNum}</b><br>${today}<br>Validez: 15 d\u00edas</div></div>
+<div class="hdr"><div class="logo-area"><div style="width:56px;height:56px;background:#f8f6f0;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px;color:#D4A44C;letter-spacing:2px">MAYU</div><div><div class="brand">MAYU</div><div class="sub">Cotizaci\u00f3n de PODs</div></div></div><div class="meta"><b>${cotNum}</b><br>${today}<br>Validez: 15 d\u00edas</div></div>
 <div class="client-box"><b>Cliente:</b> ${proj.client||'—'}<br><b>RUT:</b> ${proj.clientRut||'—'}<br><b>Contacto:</b> ${proj.contactName||'—'}<br><b>Proyecto:</b> ${proj.name||'—'}${proj.clientAddress?'<br><b>Direcci\u00f3n:</b> '+proj.clientAddress:''}</div>
 <div class="kpi"><div class="kpi-box"><div class="kpi-vg">${fmtC(calc.totals.salePriceTotal)}</div><div class="kpi-l">Valor total del proyecto</div><div class="kpi-s">${fmtUF(calc.totals.salePriceTotal)}</div></div><div class="kpi-box"><div class="kpi-v">${calc.totalPods}</div><div class="kpi-l">Total PODs</div></div></div>
 <div class="sec"><div class="sec-t">Detalle por tipolog\u00eda</div><table><thead><tr><th>Tipo de ba\u00f1o</th><th style="text-align:center">Cantidad</th><th style="text-align:right">\u00c1rea</th><th style="text-align:right">Precio Unit.</th><th style="text-align:right">Subtotal</th></tr></thead><tbody>${typPriceRows}<tr class="tot-row"><td colspan="4" style="text-align:right;border-top:2px solid #D4A44C">Total Neto</td><td style="text-align:right;border-top:2px solid #D4A44C;color:#D4A44C">${fmtC(calc.totals.salePriceTotal)}</td></tr></tbody></table></div>
@@ -423,7 +342,6 @@ export default function App() {
       nfy('Cotización generada.');
     }catch(e){nfy('Error al generar cotización.','error');}finally{setBusy(false);}
   };
-
   const loadCRMProject = (crm) => {
     setProj(p => ({...p, name: crm.nombre || p.name, client: crm.cliente || p.client, contactName: crm.responsable_comercial || '', clientAddress: crm.ubicacion || ''}));
     if (crm.cantidad_unidades > 1) {
@@ -432,7 +350,6 @@ export default function App() {
     setTab('design');
     nfy('Proyecto cargado desde CRM: ' + crm.nombre);
   };
-
   const addTyp=()=>{const id=`typ-${Date.now()}`;setTyps(p=>[...p,{...defTyp,id,name:`Baño Tipo ${p.length+1}`}]);setActTypId(id);nfy("Tipología creada.");};
   const updTyp=(id,f,v)=>setTyps(p=>p.map(t=>t.id===id?{...t,[f]:v}:t));
   const delTyp=(id)=>{if(typs.length<=1)return nfy("Mínimo 1 tipología.",'error');if(window.confirm("¿Eliminar?")){const n=typs.filter(t=>t.id!==id);setTyps(n);if(actTypId===id)setActTypId(n[0].id);}};
@@ -441,21 +358,19 @@ export default function App() {
   const addSide=()=>setTyps(p=>p.map(t=>t.id===actTypId?{...t,geometry:{...t.geometry,polygonSides:[...(t.geometry.polygonSides||[]),{id:Date.now(),dir:'R',len:1.0}]}}:t));
   const rmSide=(id)=>setTyps(p=>p.map(t=>t.id===actTypId?{...t,geometry:{...t.geometry,polygonSides:(t.geometry.polygonSides||[]).filter(s=>s.id!==id)}}:t));
   const updSide=(id,f,v)=>setTyps(p=>p.map(t=>t.id===actTypId?{...t,geometry:{...t.geometry,polygonSides:(t.geometry.polygonSides||[]).map(s=>s.id===id?{...s,[f]:v}:s)}}:t));
-
   const dlTemplate=async()=>{
     setBusy(true);
     try{
-      const X=XLSX;
+      const X=await import('https://esm.sh/xlsx');
       const d=[["PARTIDA CONSTRUCTIVA","CODIGO DE PRODUCTO","DESCRIPCION DEL PRODUCTO","PROVEEDOR / MARCA","UNIDAD DE MEDIDA","COSTO NETO UNITARIO","CANTIDAD COMERCIAL"],["ESTRUCTURA","EST-001","MONTANTE 90MM","IMEL","KG",2500,1]];
       const ws=X.utils.aoa_to_sheet(d);const wb=X.utils.book_new();X.utils.book_append_sheet(wb,ws,"Plantilla");X.writeFile(wb,"Plantilla_MAYU.xlsx");
       nfy("Plantilla descargada.");
     }catch(e){nfy("Error.",'error');}finally{setBusy(false);}
   };
-
   const uploadFile=async(e)=>{
     const f=e.target.files[0];if(!f)return;setBusy(true);
     try{
-      const X=XLSX;const d=await f.arrayBuffer();const wb=X.read(d,{type:'array'});
+      const X=await import('https://esm.sh/xlsx');const d=await f.arrayBuffer();const wb=X.read(d,{type:'array'});
       const rows=X.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:""});
       if(!rows.length)throw new Error("Vacío");
       const hdr=rows[0].map(h=>String(h||'').toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim());
@@ -466,7 +381,6 @@ export default function App() {
       let iU=hdr.findIndex(h=>h.includes('UNIDAD'));if(iU===-1)iU=4;
       let iCo=hdr.findIndex(h=>h.includes('COSTO')||h.includes('PRECIO'));if(iCo===-1)iCo=6;
       let iCa=hdr.findIndex(h=>h.includes('CANTIDAD'));if(iCa===-1)iCa=5;
-
       const ndb=[];
       rows.slice(1,154).forEach((r,idx)=>{
         const cat=String(r[iP]||'').trim().toUpperCase();const nm=String(r[iD]||'').trim();
@@ -478,11 +392,9 @@ export default function App() {
       nfy(`${ndb.length} ítems integrados.`);
     }catch(e){nfy("Error procesando Excel.",'error');}finally{setBusy(false);e.target.value=null;}
   };
-
   const procTS=(f,cb)=>{if(!f)return;if(f.size>2*1024*1024){nfy("Max 2MB.",'error');return;}const r=new FileReader();r.onload=ev=>cb(f.name,ev.target.result);r.readAsDataURL(f);};
   const tsUpload=(e)=>{procTS(e.target.files[0],(n,d)=>setManItem(p=>({...p,tsN:n,tsD:d})));e.target.value=null;};
   const directTS=async(e,mid)=>{procTS(e.target.files[0],async(n,d)=>{setMats(p=>p.map(m=>m.id===mid?{...m,techSheetName:n,techSheetData:d}:m));nfy("Ficha vinculada.");});e.target.value=null;};
-
   const saveManual=async()=>{
     if(!manItem.name||!manItem.cat)return;
     const fid=editId||(manItem.code?.trim()||`manual_${Date.now()}`);
@@ -494,17 +406,15 @@ export default function App() {
     ...(catU==='REVESTIMIENTO DE MURO'&&sub?{revRole:sub}:{}),
     };
     if(editId)setMats(p=>p.map(x=>x.id===editId?{...x,...it}:x));else setMats(p=>[it,...p]);
-    nfy("Ítem guardado.");setManItem({code:'',cat:'',name:'',brand:'',unit:'UNIDAD',cost:'',qty:'',pres:'',tsN:'',tsD:'',subline:''});setEditId(null);setShowManual(false);
+    nfy("Ítem guardado.");setManItem({code:'',cat:'',name:'',unit:'UNIDAD',cost:'',qty:'',pres:'',tsN:'',tsD:'',subline:''});setEditId(null);setShowManual(false);
   };
-
   const editClick=(m)=>{setEditId(m.id);setManItem({code:m.id,cat:m.cat,name:m.name,brand:m.brand||'',unit:m.unit||'UNIDAD',cost:m.cost,qty:m.baseQty,pres:m.pres||'',tsN:m.techSheetName||'',tsD:m.techSheetData||'',subline:m.termGroup||m.pisoGroup||m.slot||m.revRole||''});setShowManual(true);};
   const confirmDel=async()=>{if(!delId)return;setMats(p=>p.filter(m=>m.id!==delId));nfy("Eliminado.");setDelId(null);};
   const clearAll=()=>{setMats([]);localStorage.removeItem('mayu_materialsDb');setProj({name:'Nuevo Proyecto',client:'',marginPct:20,contingencyPct:5});const nid=`typ-${Date.now()}`;setTyps([{...defTyp,id:nid}]);setActTypId(nid);setShowClear(false);nfy("Memoria borrada.");};
-
   const exportXls=async()=>{
     setBusy(true);
     try{
-      const X=XLSX;const wb=X.utils.book_new();
+      const X=await import('https://esm.sh/xlsx');const wb=X.utils.book_new();
       const res=[["COTIZACIÓN PRELIMINAR - MAYU POD"],["Proyecto:",proj.name],["Cliente:",proj.client],["Fecha:",new Date().toLocaleDateString('es-CL')],["Valor UF:",UF_VALUE],[""],["Total PODs:",calc.totalPods],["Costo Directo:",calc.totals.directCost],["Mano de Obra:",calc.totals.labor],["Contingencia:",calc.totals.contingency],["Precio Venta Total (CLP):",calc.totals.salePriceTotal],["Precio Venta Total (UF):",Math.round(calc.totals.salePriceTotal/UF_VALUE*100)/100],["Precio / POD (CLP):",calc.totals.salePricePerPod],["Precio / POD (UF):",Math.round(calc.totals.salePricePerPod/UF_VALUE*100)/100],["Margen Bruto:",calc.totals.grossMargin]];
       X.utils.book_append_sheet(wb,X.utils.aoa_to_sheet(res),"Resumen");
       const bH=["Partida","Código","Descripción","Presentación","Cant. Necesaria","Cant. Compra","P.U.","Costo"];
@@ -517,17 +427,14 @@ export default function App() {
       nfy("Exportado.");
     }catch(e){nfy("Error al exportar.",'error');}finally{setBusy(false);}
   };
-
   const calc = useMemo(()=>{
     const tm={};let totL=0,totP=0;const bm={};
     mats.forEach(m=>{bm[m.id]={key:m.id,name:m.name,brand:m.brand,category:m.cat,unit:m.unit,cost:m.cost,pres:m.pres||'Unidad',slot:m.slot||'',revRole:m.revRole||'',termGroup:m.termGroup||'',pisoGroup:m.pisoGroup||'',theoreticalQty:0,realQty:0,purchaseQty:0,materialCost:0,laborCost:0,totalCost:0,techSheetName:m.techSheetName,techSheetData:m.techSheetData};});
-
     typs.forEach(typ=>{
       const g=typ.geometry||defGeom;const c=typ.config||defConf;const cnt=Number(typ.count)||0;totP+=cnt;
       let fa=0,per=0,closed=true,pc=[{x:0,y:0}];
       if(g.mode==='rect'){fa=(Number(g.length)||0)*(Number(g.width)||0);per=2*((Number(g.length)||0)+(Number(g.width)||0));pc=[{x:0,y:0},{x:Number(g.length)||0,y:0},{x:Number(g.length)||0,y:Number(g.width)||0},{x:0,y:Number(g.width)||0},{x:0,y:0}];}
       else{let cx=0,cy=0;(g.polygonSides||[]).forEach(s=>{per+=Number(s.len)||0;if(s.dir==='U')cy-=Number(s.len)||0;if(s.dir==='D')cy+=Number(s.len)||0;if(s.dir==='L')cx-=Number(s.len)||0;if(s.dir==='R')cx+=Number(s.len)||0;pc.push({x:cx,y:cy});});if(Math.abs(cx)>0.01||Math.abs(cy)>0.01)closed=false;else{let ac=0;for(let i=0;i<pc.length-1;i++)ac+=pc[i].x*pc[i+1].y-pc[i+1].x*pc[i].y;fa=Math.abs(ac)/2;}}
-
       const dCnt=Number(g.doorCount)||1;const dA=dCnt*(Number(g.doorWidth)||0.75)*(Number(g.doorHeight)||2.0);
       const nwa=Math.max(0,(per*(Number(g.height)||2.4))-dA);const ca=fa;
       const tA=((Number(c.tileLength)||60)/100)*((Number(c.tileWidth)||60)/100);
@@ -536,15 +443,11 @@ export default function App() {
       if(g.mode==='rect'){const tL=(Number(c.tileLength)||60)/100;const tW=(Number(c.tileWidth)||60)/100;ppP=Math.min(Math.ceil((Number(g.length)||0)/tL)*Math.ceil((Number(g.width)||0)/tW),Math.ceil((Number(g.length)||0)/tW)*Math.ceil((Number(g.width)||0)/tL));}
       else ppP=Math.ceil(efa/tA);
       const tpT=ppP*cnt;const yM2=Number(c.boxYieldM2)||1.44;const ppB=Math.round(yM2/tA)||1;const tbT=Math.ceil(tpT/ppB);const tmP=tbT*yM2;const am2=cnt>0?(tmP/cnt):0;
-
       tm[typ.id]={floorArea:fa,perimeter:per,netWallArea:nwa,ceilingArea:ca,isClosed:closed,polyCoords:pc,piecesPerPod:ppP,piecesPerBox:ppB,totalBoxesTypology:tbT,totalM2PurchasedTypology:tmP,effectiveFloorArea:efa};
-
       const labPP=Number(c.laborCostPerPod)||0;totL+=labPP*cnt;
-
       if(cnt>0){
         mats.forEach(mat=>{
           let tQ=0,w=mat.waste||0,isP=false,pQ=0;
-
           if(mat.cat==='BASE'){const floorRatio=fa/BASE_REF_AREA_PISO;pQ=mat.baseQty*floorRatio*(1+EST_MERMA);isP=true;}
           if(mat.cat==='ELECTRICO'){pQ=mat.baseQty;isP=true;}
           if(mat.cat==='SANITARIO AGUA POTABLE'){pQ=mat.baseQty;isP=true;}
@@ -575,7 +478,6 @@ export default function App() {
             }
           }
           if(mat.cat==='CIELO'){pQ=mat.baseQty;isP=true;}
-          // TERMINACION PISO: tipo seleccionable, insumos automáticos por área
           if(mat.cat==='PISO'){
             if(mat.pisoGroup){
               if(mat.pisoGroup===c.pisoType && c.pisoMat===mat.id){pQ=Math.ceil(fa/2.34);isP=true;}
@@ -606,20 +508,17 @@ export default function App() {
           if(mat.cat==='ESTRUCTURA'){const areaRatio=nwa/EST_REF_AREA_NETA;pQ=mat.baseQty*areaRatio*(1+EST_MERMA);isP=true;}
           if(mat.cat==='INSUMOS GENERALES'){pQ=mat.baseQty;isP=true;}
           if(mat.cat==='TECHO'){const PLANCHA_TECHO_M2=2.9768;pQ=Math.ceil(ca/PLANCHA_TECHO_M2);isP=true;}
-          // PUERTAS: slots seleccionables + insumos fijos
           if(mat.cat==='PUERTAS'){
             if(mat.slot==='puerta'){if(c.puertaMat===mat.id){pQ=Number(c.puertaQty)||1;isP=true;}}
             else if(mat.slot==='cerradura'){if(c.cerraduraMat===mat.id){pQ=Number(c.puertaQty)||1;isP=true;}}
             else {pQ=mat.baseQty;isP=true;}
           }
-
           if(isP){tQ=pQ;}
           const rQ=tQ*(1+w);
           bm[mat.id].theoreticalQty+=(tQ*cnt);bm[mat.id].realQty+=(rQ*cnt);
         });
       }
     });
-
     const isContinuous=(pres)=>{const p=(pres||'').toLowerCase();return p==='metro lineal'||p==='kg';};
     let totM=0,totMTheo=0;
     Object.values(bm).forEach(item=>{
@@ -632,35 +531,27 @@ export default function App() {
         totMTheo+=item.theoreticalCost;
       }
     });
-
     const bom=Object.values(bm).filter(i=>i.realQty>0||i.theoreticalQty>0);
     const byCat={},costsCat={};
     bom.forEach(i=>{if(!byCat[i.category]){byCat[i.category]=[];costsCat[i.category]={materialCost:0,totalCost:0};}byCat[i.category].push(i);costsCat[i.category].materialCost+=i.materialCost;costsCat[i.category].totalCost+=i.totalCost;});
     const dc=totM+totL;const cg=dc*((Number(proj.contingencyPct)||0)/100);const cwc=dc+cg;
     const spt=cwc/(1-((Number(proj.marginPct)||0)/100));const spp=totP>0?spt/totP:0;
-
     return{typMetrics:tm,totalPods:totP,bom,bomByCategory:byCat,costsByCategory:costsCat,totals:{material:totM,materialTheoretical:totMTheo,labor:totL,directCost:dc,contingency:cg,costWithContingency:cwc,grossMargin:spt-cwc,salePricePerPod:spp,salePriceTotal:spt}};
   },[typs,proj.contingencyPct,proj.marginPct,mats]);
-
   const wallData = useMemo(()=>{
     let s=[];
     if(actTyp.geometry.mode==='rect')s=[{l:'M1',len:Number(actTyp.geometry.length)||0,c:STROKE_COLORS[0]},{l:'M2',len:Number(actTyp.geometry.width)||0,c:STROKE_COLORS[1]},{l:'M3',len:Number(actTyp.geometry.length)||0,c:STROKE_COLORS[2]},{l:'M4',len:Number(actTyp.geometry.width)||0,c:STROKE_COLORS[3]}];
     else s=(actTyp.geometry.polygonSides||[]).map((x,i)=>({l:`M${i+1}`,len:Number(x.len)||0,c:STROKE_COLORS[i%STROKE_COLORS.length]}));
     return s.map(x=>({...x,area:x.len*(Number(actTyp.geometry.height)||0)}));
   },[actTyp.geometry]);
-
   const fmtC=(v)=>new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0}).format(v||0);
   const fmtN=(v)=>new Intl.NumberFormat('es-CL',{maximumFractionDigits:2}).format(v||0);
   const fmtUF=(v)=>new Intl.NumberFormat('es-CL',{minimumFractionDigits:2,maximumFractionDigits:2}).format((v||0)/UF_VALUE)+' UF';
-
   const cm=calc.typMetrics[actTypId]||{floorArea:0,perimeter:0,netWallArea:0,ceilingArea:0,effectiveFloorArea:0,piecesPerPod:0,totalBoxesTypology:0,isClosed:false};
-
   const mo=(fn)=>mats.filter(fn).map(m=>({v:m.id,l:`${m.name} - ${fmtC(m.cost)}/${m.unit}`}));
   const allMo=mats.map(m=>({v:m.id,l:`${m.name} - ${fmtC(m.cost)}/${m.unit}`}));
   const prtOpts=mo(m=>m.cat.toUpperCase()==='PUERTAS');
-
   const filtMats=useMemo(()=>mats.filter(m=>m.id.toLowerCase().includes((matFilt.code||'').toLowerCase())&&m.cat.toLowerCase().includes((matFilt.cat||'').toLowerCase())&&m.name.toLowerCase().includes((matFilt.name||'').toLowerCase())&&(m.pres||'').toLowerCase().includes((matFilt.pres||'').toLowerCase())),[mats,matFilt]);
-
   const renderSVG=()=>{
     const co=calc.typMetrics[actTypId]?.polyCoords;if(!co||!co.length)return null;
     let mnX=co[0].x,mxX=co[0].x,mnY=co[0].y,mxY=co[0].y;
@@ -676,9 +567,7 @@ export default function App() {
       </svg>
     );
   };
-
   const isStageDone=(sid)=>{const c=actTyp.config;const ch={base:mats.some(m=>m.cat==='BASE'),estructura:mats.some(m=>m.cat==='ESTRUCTURA'),techo:mats.some(m=>m.cat==='TECHO'),electrico:mats.some(m=>m.cat==='ELECTRICO'),sanitario_ap:mats.some(m=>m.cat==='SANITARIO AGUA POTABLE'),sanitario_al:mats.some(m=>m.cat==='SANITARIO ALCANTARILLADO'),revestimiento_muro:c.revWallCfg,cielo:c.cieloYC,sanitarios_artefactos:c.artTina||c.artWCTanque||c.artLavamanos,terminacion_muro:true,piso:c.pisoType,puertas:c.puertaMat,insumos:true};return!!ch[sid];};
-
   const stageUI=(sid)=>{
     const c=actTyp.config;const g=actTyp.geometry;
     const GenS=({mk,yk,so,yl,ys,rl,rv,ph,children})=>(
@@ -687,7 +576,6 @@ export default function App() {
         {c[mk]&&<>{yk&&<DkIn label={yl||'Rendimiento'} value={c[yk]} onChange={e=>updConf({[yk]:Number(e.target.value)})} sfx={ys} step="0.1"/>}<ResBadge label={rl||'Cantidad/POD'} value={rv}/>{children}</>}
       </div>
     );
-
     switch(sid){
       case 'base': {
         const bi=mats.filter(m=>m.cat==='BASE');const br=bi.reduce((s,m)=>s+(m.baseQty*m.cost),0);const fr=BASE_REF_AREA_PISO>0?cm.floorArea/BASE_REF_AREA_PISO:0;const bc=br*fr*(1+EST_MERMA);
@@ -695,14 +583,18 @@ export default function App() {
           <div className="bg-slate-800/80 rounded-xl p-4"><div className="grid grid-cols-3 gap-3 text-center"><div><p className="text-[10px] text-slate-400 uppercase mb-1">Área piso</p><p className="text-lg font-bold">{fmtN(cm.floorArea)} m²</p></div><div><p className="text-[10px] text-slate-400 uppercase mb-1">Factor</p><p className="text-lg font-bold">{fmtN(fr)}x</p></div><div><p className="text-[10px] text-slate-400 uppercase mb-1">$/m²</p><p className="text-lg font-bold text-amber-400">{cm.floorArea>0?fmtC(bc/cm.floorArea):'-'}</p></div></div></div>
         </AutoStage>;
       }
-
       case 'estructura': {
         const ei2=mats.filter(m=>m.cat==='ESTRUCTURA');const er=ei2.reduce((s,m)=>s+(m.baseQty*m.cost),0);const ar=EST_REF_AREA_NETA>0?cm.netWallArea/EST_REF_AREA_NETA:0;const ec=er*ar*(1+EST_MERMA);const ek=EST_REF_KG*ar*(1+EST_MERMA);const ckA=EST_REF_KG>0?er/EST_REF_KG:0;
         return <AutoStage title="Estructura Steel Frame" badge={`Auto · ${fmtN(ar)}x · 5% merma`} badgeColor="text-emerald-400 bg-emerald-900/50" items={ei2} total={ec} desc={`Ref Baumax ${EST_REF_AREA_NETA}m² = ${fmtC(er)}. Ratio ${fmtN(EST_REF_KG/EST_REF_AREA_NETA)} kg/m²`}>
           <div className="bg-slate-800/80 rounded-xl p-4"><div className="grid grid-cols-4 gap-3 text-center"><div><p className="text-[10px] text-slate-400 uppercase mb-1">Área neta</p><p className="text-lg font-bold">{fmtN(cm.netWallArea)} m²</p></div><div><p className="text-[10px] text-slate-400 uppercase mb-1">Factor</p><p className="text-lg font-bold">{fmtN(ar)}x</p></div><div><p className="text-[10px] text-slate-400 uppercase mb-1">KG est.</p><p className="text-lg font-bold">{fmtN(ek)} kg</p></div><div><p className="text-[10px] text-slate-400 uppercase mb-1">$/kg</p><p className="text-lg font-bold text-amber-400">{fmtC(ckA)}</p></div></div></div>
         </AutoStage>;
       }
-
+      case 'techo': {
+        const ti=mats.filter(m=>m.cat==='TECHO');const PLT=2.9768;const tPl=Math.ceil(cm.ceilingArea/PLT);const tt=ti.reduce((s,m)=>s+(Math.ceil(cm.ceilingArea/PLT)*m.cost),0);
+        return <AutoStage title="Techo (Terciado Estructural)" badge={`Auto · ${tPl} planchas`} badgeColor="text-emerald-400 bg-emerald-900/50" items={ti} total={tt} desc={`Terciado estructural 1220×2440mm (${fmtN(PLT)} m²/plancha). Área cielo: ${fmtN(cm.ceilingArea)} m² → ${tPl} planchas enteras.`}>
+          <div className="bg-slate-800/80 rounded-xl p-4"><div className="grid grid-cols-3 gap-3 text-center"><div><p className="text-[10px] text-slate-400 uppercase mb-1">Área cielo</p><p className="text-lg font-bold text-white">{fmtN(cm.ceilingArea)} m²</p></div><div><p className="text-[10px] text-slate-400 uppercase mb-1">Plancha</p><p className="text-lg font-bold text-white">{fmtN(PLT)} m²</p></div><div><p className="text-[10px] text-slate-400 uppercase mb-1">Planchas</p><p className="text-lg font-bold text-emerald-400">{tPl}</p></div></div></div>
+        </AutoStage>;
+      }
       case 'electrico': {
         const ei=mats.filter(m=>m.cat==='ELECTRICO');const et=ei.reduce((s,m)=>s+(m.baseQty*m.cost),0);
         return <AutoStage title="Instalación Eléctrica" badge="Fijo por POD" badgeColor="text-amber-400 bg-amber-900/50" items={ei} total={et} desc="Conduit + cajas + cableado + puntos. Plano ELEC-03."/>;
@@ -773,10 +665,8 @@ export default function App() {
               {revInsumos.length>0 && (<div className="bg-slate-800/50 rounded-xl overflow-hidden"><div className="p-3 border-b border-slate-700/50"><span className="text-[10px] text-slate-400 uppercase font-bold">Insumos instalación (automáticos)</span></div><div className="max-h-32 overflow-y-auto">{revInsumos.map(m=><div key={m.id} className="flex items-center justify-between px-3 py-1 border-b border-slate-700/30 text-[11px]"><span className="text-slate-300 flex-1 truncate mr-2">{m.name}</span><span className="text-white font-medium w-16 text-right shrink-0">{fmtC(m.baseQty*m.cost)}</span></div>)}</div></div>)}
             </div>
           </div>
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700 leading-relaxed"><span className="font-bold">Interior + Exterior:</span> Cada muro tiene dos caras configurables. Int = cara interior del POD, Ext = cara que da al departamento. Faldón tina aparte. Insumos escalan automáticamente.</div>
         </div>
       );}
-
       case 'cielo': {
         const revAll = mats.filter(m=>m.cat==='REVESTIMIENTO DE MURO');
         const revPlanchas = revAll.filter(m=>m.revRole&&m.revRole!=='revFibro');
@@ -818,10 +708,8 @@ export default function App() {
               {cieloInsumos.length>0 && (<div className="bg-slate-800/50 rounded-xl overflow-hidden"><div className="p-3 border-b border-slate-700/50"><span className="text-[10px] text-slate-400 uppercase font-bold">Insumos instalación (fijos por POD)</span></div><div className="max-h-32 overflow-y-auto">{cieloInsumos.map(m=><div key={m.id} className="flex items-center justify-between px-3 py-1 border-b border-slate-700/30 text-[11px]"><span className="text-slate-300 flex-1 truncate mr-2">{m.name}</span><span className="text-white font-medium w-16 text-right shrink-0">{fmtC(m.baseQty*m.cost)}</span></div>)}</div></div>)}
             </div>
           </div>
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700 leading-relaxed"><span className="font-bold">Optimización automática:</span> Si el cielo usa el mismo tipo de YC que algún muro, las planchas se acumulan en un solo producto en el BOM - el redondeo comercial se aplica sobre el total consolidado, optimizando la compra.</div>
         </div>
       );}
-
       case 'sanitarios_artefactos': {
         const artAll = mats.filter(m=>m.cat==='SANITARIO ARTEFACTOS');
         const artFijos = artAll.filter(m=>!m.slot);
@@ -875,10 +763,8 @@ export default function App() {
               {artFijos.length>0 && (<div className="bg-slate-800/50 rounded-xl overflow-hidden"><div className="p-3 border-b border-slate-700/50"><span className="text-[10px] text-slate-400 uppercase font-bold">Insumos instalación (fijos por POD)</span></div><div className="max-h-36 overflow-y-auto">{artFijos.map(m=><div key={m.id} className="flex items-center justify-between px-3 py-1 border-b border-slate-700/30 text-[11px]"><span className="text-slate-300 flex-1 truncate mr-2">{m.name}</span><span className="text-slate-500 w-12 text-right shrink-0">{m.baseQty}</span><span className="text-white font-medium w-16 text-right shrink-0">{fmtC(m.baseQty*m.cost)}</span></div>)}</div></div>)}
             </div>
           </div>
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700 leading-relaxed"><span className="font-bold">Seleccionable por segmento:</span> El comercial elige tina/receptáculo, WC, lavamanos y griferías según el proyecto. Los insumos de instalación (sifón, desagüe, sello, kits, soporte, celosía, uñeta, mecanismo WC) son estándar y van siempre.</div>
         </div>
       );}
-
       case 'terminacion_muro': {
         const tmAll = mats.filter(m=>m.cat==='TERMINACION DE MURO');
         const tmFijos = tmAll.filter(m=>!m.termGroup);
@@ -938,12 +824,10 @@ export default function App() {
               </div>
             </div>
           </div>
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700 leading-relaxed"><span className="font-bold">Por elevación:</span> Cerámica incluye adhesivo Beckron, espaciador, fragüe y esquinero. Pintura incluye pasta muro interior + látex o esmalte al agua con 1-3 manos. Impermeabilizante Cave Polflex, guardapolvo y molduras van siempre.</div>
         </div>
       );}
-
       case 'piso': {
-        const pisoAll = mats.filter(m=>m.cat==='TERMINACION PISO');
+        const pisoAll = mats.filter(m=>m.cat==='PISO');
         const pisoMats = pisoAll.filter(m=>m.pisoGroup);
         const pisoInsumos = pisoAll.filter(m=>!m.pisoGroup);
         const selPiso = pisoAll.find(m=>m.id===c.pisoMat);
@@ -975,7 +859,6 @@ export default function App() {
           </div>
         </div>
       );}
-
       case 'puertas': {
         const prtAll = mats.filter(m=>m.cat==='PUERTAS');
         const prtSlots = [{key:'puertaMat',slot:'puerta',label:'Puerta'},{key:'cerraduraMat',slot:'cerradura',label:'Cerradura'}];
@@ -1010,15 +893,12 @@ export default function App() {
               {prtInsumos.length>0&&<div className="bg-slate-800/50 rounded-xl overflow-hidden"><div className="p-3 border-b border-slate-700/50"><span className="text-[10px] text-slate-400 uppercase font-bold">Insumos instalación (automáticos)</span></div><div className="max-h-32 overflow-y-auto">{prtInsumos.map(m=><div key={m.id} className="flex items-center justify-between px-3 py-1 border-b border-slate-700/30 text-[11px]"><span className="text-slate-300 flex-1 truncate mr-2">{m.name}</span><span className="text-white font-medium w-16 text-right shrink-0">{fmtC(m.baseQty*m.cost)}</span></div>)}</div></div>}
             </div>
           </div>
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700">Insumos fijos: listones impregnados, tope puerta, tornillos. La puerta y cerradura son seleccionables por segmento. El vano ({fmtN(g.doorWidth)}×{fmtN(g.doorHeight)}m) se descuenta del área de muros.</div>
         </div>
       );}
-
       case 'insumos': {
         const gi=mats.filter(m=>m.cat==='INSUMOS GENERALES');const gt=gi.reduce((s,m)=>s+(m.baseQty*m.cost),0);
         return <AutoStage title="Insumos Generales" badge="Fijo por POD" items={gi} total={gt} desc="Consumibles de fabricación: cintas, film stretch, rodillo púas, tarugos, adhesivo tapagoteras, spray marcado. Fijos por POD."/>;
       }
-
       default: return(
         <div className="flex flex-col items-center justify-center text-center p-8 border-2 border-dashed border-blue-200 rounded-xl bg-white">
           <Wrench size={32} className="text-blue-300 mb-3"/>
@@ -1028,25 +908,20 @@ export default function App() {
       );
     }
   };
-
-
 const AutoStage=({title,badge,badgeColor,desc,items,total,subtitle,children})=>(
 <div className="space-y-4"><div className="bg-slate-900 rounded-2xl border border-slate-700 overflow-hidden text-white">
 <div className="p-4 border-b border-slate-700/50 flex justify-between items-center"><h4 className="font-bold text-blue-400 text-sm uppercase">{title}</h4><span className={`text-[10px] ${badgeColor||'text-amber-400 bg-amber-900/50'} px-2 py-1 rounded font-bold`}>{badge}</span></div>
 <div className="p-5 space-y-4">{children}
 <div className="bg-emerald-900/40 border border-emerald-500/30 rounded-xl p-4 flex justify-between items-center"><div><p className="text-xs text-emerald-300/70 uppercase font-bold">{subtitle||'Total por POD'}</p></div><div className="text-right"><p className="text-2xl font-black text-emerald-400">{fmtC(total)}</p><p className="text-xs text-emerald-300/60 mt-0.5">{fmtUF(total)}</p></div></div>
 {items.length>0&&<div className="bg-slate-800/50 rounded-xl overflow-hidden"><div className="p-3 border-b border-slate-700/50 flex justify-between"><span className="text-[10px] text-slate-400 uppercase font-bold">Composición</span><span className="text-[10px] text-slate-500">{items.length} ítems</span></div><div className="max-h-40 overflow-y-auto">{items.map(m=><div key={m.id} className="flex items-center justify-between px-3 py-1 border-b border-slate-700/30 text-[11px]"><span className="text-slate-300 flex-1 truncate mr-2">{m.name}</span><span className="text-slate-500 w-12 text-right shrink-0">{m.baseQty}</span><span className="text-white font-medium w-16 text-right shrink-0">{fmtC(m.baseQty*m.cost)}</span></div>)}</div></div>}
-</div></div>{desc&&<div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700">{desc}</div>}</div>);
+</div></div>{desc&&}</div>);
   const navTabs=[{id:'project',icon:<Layers size={18}/>,l:'Proyecto'},{id:'design',icon:<LayoutGrid size={18}/>,l:'Diseño'},{id:'bom',icon:<Calculator size={18}/>,l:'BOM'},{id:'dashboard',icon:<LayoutDashboard size={18}/>,l:'Dashboard'},{id:'database',icon:<Database size={18}/>,l:'Data'}];
-
   return(
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-800">
       <style>{`@keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}@keyframes scaleIn{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}.cscr::-webkit-scrollbar{height:6px}.cscr::-webkit-scrollbar-track{background:#f1f5f9;border-radius:3px}.cscr::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px}`}</style>
-
       <Notify n={notif} onClose={()=>setNotif(null)}/>
       {showClear&&<ConfirmDlg title="¿Borrar Todo?" msg="Se borrará TODA la memoria local." onOk={clearAll} onNo={()=>setShowClear(false)} danger/>}
       {delId&&<ConfirmDlg title="¿Eliminar?" msg="Se eliminará permanentemente." onOk={confirmDel} onNo={()=>setDelId(null)} danger/>}
-
       {showQuote&&(
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[80] p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[95vh] flex flex-col" style={{animation:'scaleIn .2s ease'}}>
@@ -1061,7 +936,6 @@ const AutoStage=({title,badge,badgeColor,desc,items,total,subtitle,children})=>(
           </div>
         </div>
       )}
-
       {/* MANUAL MODAL */}
       {showManual&&(
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
@@ -1096,30 +970,17 @@ const AutoStage=({title,badge,badgeColor,desc,items,total,subtitle,children})=>(
           </div>
         </div>
       )}
-
       {/* TEMPLATE MODAL */}
-      {showTplModal&&(
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
-          <div className="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-md" style={{animation:'scaleIn .2s ease'}}>
-            <div className="flex justify-between items-center mb-4 border-b pb-3"><h3 className="text-lg font-bold">Plantilla Personalizada</h3><button onClick={()=>setShowTplModal(false)} className="text-slate-400 hover:bg-slate-100 p-1.5 rounded-full"><X size={20}/></button></div>
-            <p className="text-sm text-slate-600 mb-4">Sube tu plantilla Excel. El sistema detectará las columnas automáticamente.</p>
-            <div className="bg-amber-50 p-3 rounded-xl border border-amber-200 mb-4"><p className="text-xs text-amber-800"><strong>Columnas:</strong> Partida, Código, Descripción, Unidad, Costo, Cantidad.</p></div>
-            <label className="flex flex-col items-center p-8 border-2 border-dashed border-slate-300 rounded-xl bg-slate-50 hover:bg-slate-100 cursor-pointer"><UploadCloud size={32} className="text-slate-400 mb-3"/><span className="text-sm text-slate-600">Seleccionar archivo</span><input type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={e=>{uploadFile(e);setShowTplModal(false);}}/></label>
-            <div className="pt-4 flex justify-end"><button onClick={()=>setShowTplModal(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl">Cerrar</button></div>
-          </div>
-        </div>
-      )}
-
+      
       {/* HEADER */}
       <header className="bg-white border-b border-slate-200 px-4 py-2 shadow-sm flex justify-between items-center z-20 shrink-0">
         <div className="flex items-center gap-3">
           <button className="lg:hidden p-1.5 hover:bg-slate-100 rounded-lg text-slate-600" onClick={()=>setMobMenu(!mobMenu)}><Menu size={22}/></button>
-          <img src={MAYU_LOGO} alt="MAYU" className="h-10 w-10"/>
+          <MAYU_LOGO_SVG s={40}/>
           <div><h1 className="text-lg font-bold leading-tight" style={{color:'#2c2c2a'}}>Cotizador de PODs</h1><p className="text-[10px] font-medium tracking-widest uppercase hidden sm:block" style={{color:'#9B9B5B'}}>Motor Paramétrico de Costos</p></div>
         </div>
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-[11px] font-bold border" style={{color:'#9B9B5B',borderColor:'#d4d0c8'}}><div className="w-2 h-2 rounded-full animate-pulse" style={{backgroundColor:'#9B9B5B'}}/><span className="hidden sm:inline">v2.0</span></div>
       </header>
-
       <div className="flex flex-1 overflow-hidden relative">
         {/* SIDEBAR */}
         <nav className={`${mobMenu?'translate-x-0':'-translate-x-full'} lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-30 w-52 bg-white border-r p-3 flex flex-col gap-1 shrink-0 transition-transform duration-200 pt-16 lg:pt-3`}>
@@ -1128,9 +989,7 @@ const AutoStage=({title,badge,badgeColor,desc,items,total,subtitle,children})=>(
           <div className="mt-auto pt-4 border-t border-slate-100"><div className="text-[10px] text-slate-400 font-medium px-3 space-y-1"><p>PODs: <span className="text-blue-600 font-bold text-xs">{calc.totalPods}</span></p><p>Costo: <span className="font-bold text-xs">{fmtC(calc.totals.directCost)}</span></p></div></div>
         </nav>
         {mobMenu&&<div className="fixed inset-0 bg-black/30 z-20 lg:hidden" onClick={()=>setMobMenu(false)}/>}
-
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-slate-50">
-
           {/* TAB PROJECT */}
           {tab==='project'&&(
             <>
@@ -1191,9 +1050,7 @@ const AutoStage=({title,badge,badgeColor,desc,items,total,subtitle,children})=>(
                 <button onClick={addTyp} className="mt-4 flex items-center gap-2 text-blue-600 font-medium hover:bg-blue-50 px-4 py-2.5 rounded-xl border border-transparent hover:border-blue-200"><Plus size={16}/> Agregar</button>
               </div>
             </div>
-            </>
           )}
-
           {/* TAB DESIGN */}
           {tab==='design'&&(
             <div className="max-w-7xl mx-auto" style={{animation:'slideUp .3s ease'}}>
@@ -1248,7 +1105,6 @@ const AutoStage=({title,badge,badgeColor,desc,items,total,subtitle,children})=>(
                     </div>
                   </div>
                 </div>
-
                 {/* TIMELINE */}
                 <div className="space-y-3">
                   <h3 className="font-bold text-slate-800 text-lg mb-2">Línea de Fabricación</h3>
@@ -1271,7 +1127,6 @@ const AutoStage=({title,badge,badgeColor,desc,items,total,subtitle,children})=>(
               </div>
             </div>
           )}
-
           {/* TAB BOM */}
           {tab==='bom'&&(
             <div className="max-w-6xl mx-auto" style={{animation:'slideUp .3s ease'}}>
@@ -1286,25 +1141,18 @@ const AutoStage=({title,badge,badgeColor,desc,items,total,subtitle,children})=>(
               :<div className="bg-white rounded-2xl border shadow-sm overflow-hidden"><table className="w-full text-left border-collapse"><thead><tr className="bg-slate-100 text-slate-600 text-xs uppercase tracking-wider"><th className="p-3 border-b w-1/3">Partida</th><th className="p-3 border-b text-center">Items</th><th className="p-3 border-b text-right">Costo Mat.</th><th className="p-3 border-b text-right font-bold">Total</th><th className="p-3 border-b w-14"></th></tr></thead><tbody className="text-sm">
                 {Object.entries(calc.bomByCategory).map(([cat,items])=>{const t=calc.costsByCategory[cat];return(<tr key={cat} onClick={()=>setSelCat(cat)} className="border-b cursor-pointer hover:bg-slate-50 group"><td className="p-4 font-semibold flex items-center gap-2"><Layers size={16} className="text-blue-500"/>{cat}</td><td className="p-4 text-center font-bold text-slate-500">{items.length}</td><td className="p-4 text-right text-slate-600">{fmtC(t.materialCost)}</td><td className="p-4 text-right font-bold border-l">{fmtC(t.totalCost)}</td><td className="p-4 text-center"><button className="text-blue-600 bg-blue-100 p-2 rounded-full group-hover:bg-blue-600 group-hover:text-white"><Search size={16}/></button></td></tr>);})}
               </tbody></table></div>}
-
-              {selCat&&<div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col" style={{animation:'scaleIn .2s ease'}}>
-                  <div className="flex justify-between items-center p-6 border-b bg-slate-50 rounded-t-2xl"><div><div className="flex items-center gap-2 text-blue-600 mb-1"><Layers size={20}/><span className="text-xs font-bold uppercase tracking-wider">{selCat}</span></div><p className="text-sm text-slate-500">{calc.bomByCategory[selCat].length} productos</p></div><button onClick={()=>setSelCat(null)} className="text-slate-400 hover:text-slate-700 bg-slate-200 p-2 rounded-full"><X size={24}/></button></div>
-                  <div className="flex-1 overflow-y-auto p-6"><table className="w-full text-left border-collapse"><thead><tr className="bg-slate-100 text-slate-600 text-xs uppercase"><th className="p-3 border-b">ID</th><th className="p-3 border-b">Descripción</th><th className="p-3 border-b">Presentación</th><th className="p-3 border-b text-right">Cant. Compra</th><th className="p-3 border-b text-right">P.U.</th><th className="p-3 border-b text-right">Costo Total</th></tr></thead><tbody className="text-sm">
-                    {calc.bomByCategory[selCat].map((it,idx)=>{const z=it.realQty===0;const pm=typs.some(t=>Object.values(t.config).includes(it.key));const hasWaste=it.purchaseQty>it.realQty*1.01;return(<tr key={idx} className={`border-b hover:bg-slate-50 ${z?'opacity-40':''}`}>
-                      <td className="p-3"><span className="font-mono text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded">{it.key}</span></td>
-                      <td className="p-3"><p className={`font-semibold ${z?'text-slate-500 line-through':'text-slate-800'}`}>{it.name}{pm&&!z&&<span className="ml-2 bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded text-[10px] uppercase font-bold">Param</span>}</p>{it.brand&&<p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5"><Factory size={12}/>{it.brand}</p>}</td>
-                      <td className="p-3"><span className="text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">{it.pres}</span></td>
-                      <td className="p-3 text-right"><span className="font-bold text-blue-600">{fmtN(it.purchaseQty)}</span>{hasWaste&&<span className="block text-[10px] text-slate-400" title="Necesario teórico">({fmtN(it.realQty)} teórico)</span>}</td>
-                      <td className="p-3 text-right text-slate-500">{fmtC(it.cost)}</td>
-                      <td className={`p-3 text-right font-bold border-l ${z?'text-slate-400':'text-slate-800'}`}>{fmtC(it.materialCost)}</td>
-                    </tr>);})}
-                  </tbody></table></div>
+              {selCat&&calc.bomByCategory[selCat]&&(
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                  <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col" style={{animation:'scaleIn .2s ease'}}>
+                    <div className="flex justify-between items-center p-5 border-b bg-slate-50 rounded-t-2xl"><div><div className="flex items-center gap-2 text-blue-600 mb-1"><Layers size={20}/><span className="text-xs font-bold uppercase tracking-wider">{selCat}</span></div><p className="text-sm text-slate-500">{calc.bomByCategory[selCat].length} productos</p></div><button onClick={()=>setSelCat(null)} className="text-slate-400 hover:text-slate-700 bg-slate-200 p-2 rounded-full"><X size={20}/></button></div>
+                    <div className="flex-1 overflow-y-auto p-6"><table className="w-full text-left border-collapse"><thead><tr className="bg-slate-100 text-slate-600 text-xs uppercase"><th className="p-3 border-b">ID</th><th className="p-3 border-b">Descripción</th><th className="p-3 border-b">Pres.</th><th className="p-3 border-b text-right">Cant. Compra</th><th className="p-3 border-b text-right">P.U.</th><th className="p-3 border-b text-right">Costo Total</th></tr></thead><tbody className="text-sm">
+                      {calc.bomByCategory[selCat].map((it,idx)=>{const hasWaste=it.purchaseQty>it.realQty*1.01;return(<tr key={idx} className="border-b hover:bg-slate-50"><td className="p-3"><span className="font-mono text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded">{it.key}</span></td><td className="p-3 font-semibold text-slate-800">{it.name}</td><td className="p-3"><span className="text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">{it.pres}</span></td><td className="p-3 text-right"><span className="font-bold text-blue-600">{fmtN(it.purchaseQty)}</span>{hasWaste&&<span className="block text-[10px] text-slate-400">({fmtN(it.realQty)} teórico)</span>}</td><td className="p-3 text-right text-slate-500">{fmtC(it.cost)}</td><td className="p-3 text-right font-bold border-l text-slate-800">{fmtC(it.materialCost)}</td></tr>);})}
+                    </tbody></table></div>
+                  </div>
                 </div>
-              </div>}
+              )}
             </div>
           )}
-
           {/* TAB DASHBOARD */}
           {tab==='dashboard'&&(
             <div className="max-w-6xl mx-auto" style={{animation:'slideUp .3s ease'}}>
@@ -1340,13 +1188,12 @@ const AutoStage=({title,badge,badgeColor,desc,items,total,subtitle,children})=>(
               <div className="bg-white p-6 rounded-2xl border shadow-sm"><h3 className="font-bold text-slate-700 mb-4">Tipologías</h3><div className="overflow-x-auto"><table className="w-full text-left text-sm min-w-[400px]"><thead><tr className="bg-slate-100 text-slate-600"><th className="p-3 border-b">Tipo</th><th className="p-3 border-b text-center">Un.</th><th className="p-3 border-b text-right">Área m²</th><th className="p-3 border-b text-right">Perím. ml</th><th className="p-3 border-b text-right">M.O./POD</th></tr></thead><tbody>{typs.map(t=><tr key={t.id} className="border-b"><td className="p-3 font-semibold">{t.name}</td><td className="p-3 text-center font-bold text-blue-600">{t.count}</td><td className="p-3 text-right">{fmtN(calc.typMetrics[t.id]?.floorArea)} m²</td><td className="p-3 text-right">{fmtN(calc.typMetrics[t.id]?.perimeter)} ml</td><td className="p-3 text-right">{fmtC(t.config.laborCostPerPod||0)}</td></tr>)}</tbody></table></div></div>
             </div>
           )}
-
           {/* TAB DATABASE */}
           {tab==='database'&&(
             <div className="max-w-6xl mx-auto" style={{animation:'slideUp .3s ease'}}>
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 border-b pb-3 gap-3">
                 <h2 className="text-2xl font-bold">Data Maestra</h2>
-                <button onClick={()=>{setEditId(null);setManItem({code:'',cat:'',name:'',brand:'',unit:'UNIDAD',cost:'',qty:'',pres:'',tsN:'',tsD:'',subline:''});setShowManual(true);}} className="text-sm flex items-center gap-2 bg-slate-800 text-white px-4 py-2.5 rounded-xl hover:bg-slate-700 shadow-sm"><Plus size={16}/> Agregar</button>
+                <button onClick={()=>{setEditId(null);setManItem({code:'',cat:'',name:'',unit:'UNIDAD',cost:'',qty:'',pres:'',tsN:'',tsD:'',subline:''});setShowManual(true);}} className="text-sm flex items-center gap-2 bg-slate-800 text-white px-4 py-2.5 rounded-xl hover:bg-slate-700 shadow-sm"><Plus size={16}/> Agregar</button>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div className="bg-white p-6 rounded-2xl border border-blue-200 shadow-sm bg-blue-50/30 flex flex-col items-center text-center">
@@ -1357,7 +1204,7 @@ const AutoStage=({title,badge,badgeColor,desc,items,total,subtitle,children})=>(
                     {busy?<span className="bg-slate-100 text-slate-500 px-4 py-2 rounded-lg text-sm">Procesando...</span>
                     :<label className="bg-blue-600 text-white px-4 py-2.5 rounded-xl cursor-pointer hover:bg-blue-700 text-sm shadow-md flex items-center gap-2 font-medium"><UploadCloud size={16}/> Subir Excel<input type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={uploadFile} disabled={busy}/></label>}
                     <button onClick={dlTemplate} disabled={busy} className="bg-white border border-blue-600 text-blue-600 px-4 py-2.5 rounded-xl hover:bg-blue-50 text-sm shadow-sm flex items-center gap-2 font-medium disabled:opacity-50"><Download size={16}/> Plantilla</button>
-                    <button onClick={()=>setShowTplModal(true)} className="bg-blue-50 border border-blue-300 text-blue-600 px-3 py-2.5 rounded-xl hover:bg-blue-100" title="Personalizada"><Settings size={16}/></button>
+                    <button onClick={()=>dlTemplate()} className="bg-blue-50 border border-blue-300 text-blue-600 px-3 py-2.5 rounded-xl hover:bg-blue-100" title="Personalizada"><Settings size={16}/></button>
                   </div>
                 </div>
                 <div className="bg-white p-6 rounded-2xl border shadow-sm flex flex-col justify-center relative overflow-hidden">
@@ -1392,7 +1239,6 @@ const AutoStage=({title,badge,badgeColor,desc,items,total,subtitle,children})=>(
               </div>
             </div>
           )}
-
         </main>
       </div>
     </div>
