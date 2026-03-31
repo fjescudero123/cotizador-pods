@@ -137,7 +137,7 @@ const ResBadge = ({label,value}) => (
     <span className="font-bold text-emerald-400">{value}</span>
   </div>
 );
-
+ 
 export default function App() {
   const [tab,setTab] = useState('project');
   const [selCat,setSelCat] = useState(null);
@@ -1050,6 +1050,7 @@ const AutoStage=({title,badge,badgeColor,desc,items,total,subtitle,children})=>(
                 <button onClick={addTyp} className="mt-4 flex items-center gap-2 text-blue-600 font-medium hover:bg-blue-50 px-4 py-2.5 rounded-xl border border-transparent hover:border-blue-200"><Plus size={16}/> Agregar</button>
               </div>
             </div>
+            </>
           )}
           {/* TAB DESIGN */}
           {tab==='design'&&(
