@@ -1,7 +1,7 @@
 // @ts-nocheck
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
-  Calculator, Ruler, Settings, Database, Layers, Box, LayoutDashboard, Search, Factory, X, Plus, UploadCloud, Trash2, CheckCircle2, AlertTriangle, Edit2, FileText, Download, LayoutGrid, Square, Hexagon, PanelBottom, ChevronDown, ChevronRight, Wrench, Send, Filter, Paperclip, DoorOpen, Zap, Droplets, ShowerHead, PaintBucket, Home, BarChart3, Package, Menu, CircleDollarSign
+  Calculator, Ruler, Settings, Database, Layers, Box, LayoutDashboard, Search, Factory, X, Plus, UploadCloud, Trash2, CheckCircle2, AlertTriangle, Edit2, FileText, Download, LayoutGrid, Square, Hexagon, PanelBottom, ChevronDown, ChevronRight, Wrench, Send, Filter, Paperclip, DoorOpen, Zap, Droplets, ShowerHead, PaintBucket, Home, BarChart3, Package, Menu, CircleDollarSign, RefreshCw
 } from 'lucide-react';
 const useCRMProjects = () => { const [crmProjects] = useState([]); const [crmLoading] = useState(false); return { crmProjects, crmLoading }; };
 const SUBLINES = {
@@ -157,6 +157,7 @@ export default function App() {
   const { crmProjects, crmLoading } = useCRMProjects();
     const [editId,setEditId] = useState(null);
   const [delId,setDelId] = useState(null);
+  const [swapFrom,setSwapFrom] = useState(null);
   const [manItem,setManItem] = useState({code:'',cat:'',name:'',unit:'UNIDAD',cost:'',qty:'',pres:'',tsN:'',tsD:'',subline:''});
   const actTyp = useMemo(()=>typs.find(t=>t.id===actTypId)||typs[0]||defTyp,[typs,actTypId]);
   const nfy = useCallback((m,t='success')=>setNotif({message:m,type:t}),[]);
@@ -375,7 +376,12 @@ export default function App() {
       const X=await import('https://esm.sh/xlsx');const d=await f.arrayBuffer();const wb=X.read(d,{type:'array'});
       const rows=X.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:""});
       if(!rows.length)throw new Error("Vacío");
-      const hdr=rows[0].map(h=>String(h||'').toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim());
+      let hdrRow=0;
+      for(let r=0;r<Math.min(rows.length,10);r++){
+        const test=rows[r].map(h=>String(h||'').toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim());
+        if(test.some(h=>h.includes('PARTIDA'))&&test.some(h=>h.includes('DESCRIPCION')||h.includes('CODIGO'))){hdrRow=r;break;}
+      }
+      const hdr=rows[hdrRow].map(h=>String(h||'').toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim());
       let iP=hdr.findIndex(h=>h.includes('PARTIDA'));if(iP===-1)iP=1;
       let iC=hdr.findIndex(h=>h.includes('CODIGO')||h==='SKU');if(iC===-1)iC=0;
       let iD=hdr.findIndex(h=>h.includes('DESCRIPCION'));if(iD===-1)iD=3;
@@ -383,18 +389,19 @@ export default function App() {
       let iU=hdr.findIndex(h=>h.includes('UNIDAD'));if(iU===-1)iU=5;
       let iCo=hdr.findIndex(h=>h.includes('COSTO')||h.includes('PRECIO'));if(iCo===-1)iCo=7;
       let iCa=hdr.findIndex(h=>h.includes('CANTIDAD'));if(iCa===-1)iCa=8;
-      let iSub=hdr.findIndex(h=>h.includes('SUBLINEA')||h.includes('SUBLINEA'));
+      let iSub=hdr.findIndex(h=>h.includes('SUBLINEA'));
       let iPres=hdr.findIndex(h=>h.includes('PRESENTACION'));
+      const cleanSub=(s)=>{const v=(s||'').trim();return(!v||v==='(sin sublínea)'||v==='(dejar vacío)'||v==='-')?'':v;};
       const ndb=[];
-      rows.slice(1,500).forEach((r,idx)=>{
+      rows.slice(hdrRow+1,hdrRow+500).forEach((r,idx)=>{
         const cat=String(r[iP]||'').trim().toUpperCase();const nm=String(r[iD]||'').trim();
         if(!cat||!nm||nm.toLowerCase().includes('total:')||nm.toLowerCase().includes('ejemplo'))return;
         const cs=String(r[iC]||'').trim();const fid=cs||`Fila_${idx+2}`;
-        const sub=iSub>=0?String(r[iSub]||'').trim():'';
+        const sub=iSub>=0?cleanSub(r[iSub]):'';
         const pres=iPres>=0?String(r[iPres]||'').trim():'';
         const classified=classifyToStage(cat);
         const subProps={};
-        if(sub && sub!=='(sin sublínea)'){
+        if(sub){
           if(classified==='TERMINACION DE MURO')subProps.termGroup=sub;
           else if(classified==='PISO')subProps.pisoGroup=sub;
           else if(classified==='SANITARIO ARTEFACTOS'||classified==='PUERTAS')subProps.slot=sub;
@@ -404,13 +411,20 @@ export default function App() {
       });
       setMats(prev => {
         const merged = [...prev];
-        let added = 0, updated = 0;
+        let added = 0, updated = 0, drafts = 0;
         ndb.forEach(newItem => {
           const idx = merged.findIndex(m => m.id === newItem.id);
           if (idx >= 0) { merged[idx] = {...merged[idx], ...newItem}; updated++; }
-          else { merged.push(newItem); added++; }
+          else {
+            const hasSub = newItem.termGroup||newItem.pisoGroup||newItem.slot||newItem.revRole;
+            if (!hasSub) { newItem.draft = true; drafts++; }
+            merged.push(newItem); added++;
+          }
         });
-        nfy(`${added} ítems nuevos, ${updated} actualizados. Total: ${merged.length}`);
+        const msg = drafts > 0
+          ? `${added} nuevos (${drafts} en borrador), ${updated} actualizados. Total: ${merged.length}. Los ítems fijos nuevos deben activarse manualmente en Data Maestra.`
+          : `${added} nuevos, ${updated} actualizados. Total: ${merged.length}`;
+        nfy(msg);
         return merged;
       });
     }catch(e){nfy("Error procesando Excel.",'error');}finally{setBusy(false);e.target.value=null;}
@@ -433,6 +447,7 @@ export default function App() {
   };
   const editClick=(m)=>{setEditId(m.id);setManItem({code:m.id,cat:m.cat,name:m.name,brand:m.brand||'',unit:m.unit||'UNIDAD',cost:m.cost,qty:m.baseQty,pres:m.pres||'',tsN:m.techSheetName||'',tsD:m.techSheetData||'',subline:m.termGroup||m.pisoGroup||m.slot||m.revRole||''});setShowManual(true);};
   const confirmDel=async()=>{if(!delId)return;setMats(p=>p.filter(m=>m.id!==delId));nfy("Eliminado.");setDelId(null);};
+  const doSwap=(activeId)=>{if(!swapFrom)return;setMats(p=>p.map(m=>{if(m.id===swapFrom)return{...m,draft:false};if(m.id===activeId)return{...m,draft:true};return m;}));const nm=mats.find(m=>m.id===swapFrom)?.name||'';nfy(`"${nm}" activado. El anterior pasó a borrador.`);setSwapFrom(null);};
   const clearAll=()=>{localStorage.removeItem('mayu_materialsDb');localStorage.removeItem('mayu_proj');localStorage.removeItem('mayu_typs');setMats([]);setProj({name:'Nuevo Proyecto',client:'',clientRut:'',clientAddress:'',clientPhone:'',clientEmail:'',contactName:'',marginPct:20,contingencyPct:5});const nid=`typ-${Date.now()}`;setTyps([{...defTyp,id:nid}]);setActTypId(nid);setShowClear(false);nfy("Memoria borrada.");};
   const exportXls=async()=>{
     setBusy(true);
@@ -536,7 +551,7 @@ export default function App() {
             else if(mat.slot==='cerradura'){if(c.cerraduraMat===mat.id){pQ=Number(c.puertaQty)||1;isP=true;}}
             else {pQ=mat.baseQty;isP=true;}
           }
-          if(isP){tQ=pQ;}
+          if(isP&&!mat.draft){tQ=pQ;}
           const rQ=tQ*(1+w);
           bm[mat.id].theoreticalQty+=(tQ*cnt);bm[mat.id].realQty+=(rQ*cnt);
         });
@@ -945,6 +960,33 @@ const AutoStage=({title,badge,badgeColor,desc,items,total,subtitle,children})=>(
       <Notify n={notif} onClose={()=>setNotif(null)}/>
       {showClear&&<ConfirmDlg title="¿Borrar Todo?" msg="Se borrará TODA la memoria local." onOk={clearAll} onNo={()=>setShowClear(false)} danger/>}
       {delId&&<ConfirmDlg title="¿Eliminar?" msg="Se eliminará permanentemente." onOk={confirmDel} onNo={()=>setDelId(null)} danger/>}
+
+      {swapFrom&&(()=>{const draft=mats.find(m=>m.id===swapFrom);if(!draft)return null;const activos=mats.filter(m=>m.cat===draft.cat&&!m.draft&&m.id!==draft.id);return(
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col" style={{animation:'scaleIn .2s ease'}}>
+            <div className="p-5 border-b">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="font-bold text-lg text-slate-800">Reemplazar ítem activo</h3>
+                  <p className="text-sm text-slate-500 mt-1">El borrador <span className="font-bold text-amber-700">{draft.name}</span> reemplazará al ítem que elijas. El reemplazado pasará a borrador.</p>
+                </div>
+                <button onClick={()=>setSwapFrom(null)} className="p-2 hover:bg-slate-100 rounded-full shrink-0"><X size={20}/></button>
+              </div>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4">
+              {activos.length===0?<p className="text-center text-slate-400 py-8">No hay ítems activos en esta partida.</p>
+              :<div className="space-y-2">{activos.map(a=>(
+                <div key={a.id} className="flex items-center justify-between p-3 border rounded-xl hover:border-amber-300 hover:bg-amber-50 group">
+                  <div className="flex-1 min-w-0 mr-3">
+                    <p className="font-medium text-sm text-slate-800 truncate">{a.name}</p>
+                    <p className="text-xs text-slate-500">{a.id} · {fmtC(a.cost)} × {a.baseQty}</p>
+                  </div>
+                  <button onClick={()=>doSwap(a.id)} className="shrink-0 px-3 py-2 bg-amber-100 text-amber-700 rounded-lg text-xs font-bold hover:bg-amber-200 flex items-center gap-1"><RefreshCw size={12}/> Reemplazar</button>
+                </div>
+              ))}</div>}
+            </div>
+          </div>
+        </div>);})()}
       {showQuote&&(
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[80] p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[95vh] flex flex-col" style={{animation:'scaleIn .2s ease'}}>
@@ -1239,14 +1281,14 @@ const AutoStage=({title,badge,badgeColor,desc,items,total,subtitle,children})=>(
                     <tr className="bg-slate-50 border-b">{['code','cat','name','pres'].map(f=><th key={f} className="p-1.5"><input type="text" placeholder="Filtrar..." className="w-full px-2 py-1.5 text-xs border rounded-lg outline-none focus:ring-1 focus:ring-blue-500 font-normal bg-white" value={matFilt[f]||''} onChange={e=>setMatFilt({...matFilt,[f]:e.target.value})}/></th>)}<th className="p-1.5"></th><th className="p-1.5"></th><th className="p-1.5"></th></tr>
                   </thead><tbody>
                     {!filtMats.length?<tr><td colSpan="7" className="p-8 text-center text-slate-400 italic">Sin coincidencias.</td></tr>
-                    :filtMats.map((m,i)=>{const stg=STAGES.find(s=>s.cat===m.cat);const stgIdx=STAGES.findIndex(s=>s.cat===m.cat);const badgeColors=['bg-amber-100 text-amber-800','bg-slate-200 text-slate-700','bg-orange-100 text-orange-800','bg-yellow-100 text-yellow-800','bg-cyan-100 text-cyan-800','bg-sky-100 text-sky-800','bg-rose-100 text-rose-800','bg-indigo-100 text-indigo-800','bg-pink-100 text-pink-800','bg-violet-100 text-violet-800','bg-lime-100 text-lime-800','bg-teal-100 text-teal-800','bg-blue-100 text-blue-800','bg-gray-200 text-gray-700'];const bc=stgIdx>=0?badgeColors[stgIdx]:'bg-red-100 text-red-700';return(<tr key={m.id+'-'+i} className="border-b hover:bg-slate-50 group/r">
+                    :filtMats.map((m,i)=>{const stg=STAGES.find(s=>s.cat===m.cat);const stgIdx=STAGES.findIndex(s=>s.cat===m.cat);const badgeColors=['bg-amber-100 text-amber-800','bg-slate-200 text-slate-700','bg-orange-100 text-orange-800','bg-yellow-100 text-yellow-800','bg-cyan-100 text-cyan-800','bg-sky-100 text-sky-800','bg-rose-100 text-rose-800','bg-indigo-100 text-indigo-800','bg-pink-100 text-pink-800','bg-violet-100 text-violet-800','bg-lime-100 text-lime-800','bg-teal-100 text-teal-800','bg-blue-100 text-blue-800','bg-gray-200 text-gray-700'];const bc=stgIdx>=0?badgeColors[stgIdx]:'bg-red-100 text-red-700';return(<tr key={m.id+'-'+i} className={`border-b hover:bg-slate-50 group/r ${m.draft?'opacity-50 bg-yellow-50':''}`}>
                       <td className="p-2 font-mono text-[10px] text-slate-400 truncate max-w-[70px]" title={m.id}>{m.id}</td>
                       <td className="p-2"><span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase leading-tight ${bc}`} title={m.catOriginal?`Original: ${m.catOriginal}`:''}>{stg?stg.label.substring(3):m.cat}</span></td>
-                      <td className="p-2"><div className="flex items-center gap-2"><span className="font-medium text-slate-800 text-xs">{m.name}</span>{m.techSheetData?<a href={m.techSheetData} download={m.techSheetName} className="inline-flex items-center gap-1 text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded text-[10px] hover:bg-blue-100 shrink-0"><FileText size={10}/> Ficha</a>:<label className="cursor-pointer text-slate-300 hover:text-blue-500 opacity-0 group-hover/r:opacity-100 shrink-0"><Paperclip size={12}/><input type="file" accept=".pdf,image/*,.doc,.docx" className="hidden" onChange={e=>directTS(e,m.id)}/></label>}</div></td>
+                      <td className="p-2"><div className="flex items-center gap-2"><span className="font-medium text-slate-800 text-xs">{m.name}</span>{m.draft&&<span className="bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded text-[10px] font-bold shrink-0">BORRADOR</span>}{m.techSheetData?<a href={m.techSheetData} download={m.techSheetName} className="inline-flex items-center gap-1 text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded text-[10px] hover:bg-blue-100 shrink-0"><FileText size={10}/> Ficha</a>:<label className="cursor-pointer text-slate-300 hover:text-blue-500 opacity-0 group-hover/r:opacity-100 shrink-0"><Paperclip size={12}/><input type="file" accept=".pdf,image/*,.doc,.docx" className="hidden" onChange={e=>directTS(e,m.id)}/></label>}</div></td>
                       <td className="p-2"><span className="text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">{m.pres||'-'}</span></td>
                       <td className="p-2 text-right font-medium text-blue-600 text-xs">{m.baseQty} <span className="text-slate-400 text-[10px]">{m.unit}</span></td>
                       <td className="p-2 text-right text-xs">{fmtC(m.cost)}</td>
-                      <td className="p-2 text-center"><div className="flex justify-center gap-1"><button onClick={()=>editClick(m)} className="text-blue-500 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 p-1.5 rounded-lg transition" title="Editar / Reclasificar"><Edit2 size={13}/></button><button onClick={()=>setDelId(m.id)} className="text-red-400 hover:text-red-600 bg-red-50 hover:bg-red-100 p-1.5 rounded-lg transition" title="Eliminar"><Trash2 size={13}/></button></div></td>
+                      <td className="p-2 text-center"><div className="flex justify-center gap-1">{m.draft&&<button onClick={()=>setMats(p=>p.map(x=>x.id===m.id?{...x,draft:false}:x))} className="text-green-600 hover:text-green-800 bg-green-50 hover:bg-green-100 p-1.5 rounded-lg transition" title="Activar (incluir en cálculo)"><CheckCircle2 size={13}/></button>}{m.draft&&<button onClick={()=>setSwapFrom(m.id)} className="text-amber-600 hover:text-amber-800 bg-amber-50 hover:bg-amber-100 p-1.5 rounded-lg transition" title="Reemplazar un ítem activo"><RefreshCw size={13}/></button>}<button onClick={()=>editClick(m)} className="text-blue-500 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 p-1.5 rounded-lg transition" title="Editar / Reclasificar"><Edit2 size={13}/></button><button onClick={()=>setDelId(m.id)} className="text-red-400 hover:text-red-600 bg-red-50 hover:bg-red-100 p-1.5 rounded-lg transition" title="Eliminar"><Trash2 size={13}/></button></div></td>
                     </tr>);})}
                   </tbody></table>}
                 </div>
