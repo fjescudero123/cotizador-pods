@@ -137,7 +137,7 @@ const ResBadge = ({label,value}) => (
     <span className="font-bold text-emerald-400">{value}</span>
   </div>
 );
- 
+
 export default function App() {
   const [tab,setTab] = useState('project');
   const [selCat,setSelCat] = useState(null);
@@ -365,32 +365,9 @@ export default function App() {
   const addSide=()=>setTyps(p=>p.map(t=>t.id===actTypId?{...t,geometry:{...t.geometry,polygonSides:[...(t.geometry.polygonSides||[]),{id:Date.now(),dir:'R',len:1.0}]}}:t));
   const rmSide=(id)=>setTyps(p=>p.map(t=>t.id===actTypId?{...t,geometry:{...t.geometry,polygonSides:(t.geometry.polygonSides||[]).filter(s=>s.id!==id)}}:t));
   const updSide=(id,f,v)=>setTyps(p=>p.map(t=>t.id===actTypId?{...t,geometry:{...t.geometry,polygonSides:(t.geometry.polygonSides||[]).map(s=>s.id===id?{...s,[f]:v}:s)}}:t));
-  const dlTemplate=async()=>{
-    setBusy(true);
-    try{
-      const X=await import('https://esm.sh/xlsx');
-      const partidas=STAGES.map(s=>s.cat);
-      const allSubs=['(sin sublínea)','ceramica','pintura','pintura_latex','pintura_esmalte','vinilico','porcelanato','tina','wc_tanque','wc_taza','wc_asiento','lavamanos','pedestal','grif_lav','grif_tina','extractor','revRH125','revRF125','revST125','revST10','revFibro','puerta','cerradura'];
-      const unidades=['UNIDAD','MT LINEAL','MT2','KG','CAJA','LITRO','GALON','ROLLO','SET','SACO','PAR'];
-      const preses=['Unidad','Caja','Saco','Rollo','Tineta','Galón','kg','MT2','metro lineal','Bolsa','Tira','Set','Pieza','fijo'];
-      const hdr=[['CÓDIGO','PARTIDA CONSTRUCTIVA','SUBLÍNEA','DESCRIPCIÓN DEL PRODUCTO','PROVEEDOR / MARCA','UNIDAD DE MEDIDA','PRESENTACIÓN','COSTO NETO UNITARIO','CANTIDAD / POD']];
-      const ws=X.utils.aoa_to_sheet(hdr);
-      ws['!cols']=[{wch:14},{wch:30},{wch:22},{wch:45},{wch:22},{wch:18},{wch:18},{wch:20},{wch:16}];
-      const dvs=[];
-      for(let r=1;r<=300;r++){
-        dvs.push({type:'list',operator:'equal',sqref:X.utils.encode_cell({r,c:1}),formulas:['"'+partidas.join(',')+'"'],showDropDown:false,showErrorMessage:true,errorTitle:'Partida no válida',error:'Solo se permiten las 13 líneas definidas.'});
-        dvs.push({type:'list',operator:'equal',sqref:X.utils.encode_cell({r,c:2}),formulas:['"'+allSubs.join(',')+'"'],allowBlank:true,showDropDown:false,showErrorMessage:true,errorTitle:'Sublínea no válida',error:'Solo sublíneas definidas. Vacío = ítem fijo.'});
-        dvs.push({type:'list',operator:'equal',sqref:X.utils.encode_cell({r,c:5}),formulas:['"'+unidades.join(',')+'"'],showDropDown:false});
-        dvs.push({type:'list',operator:'equal',sqref:X.utils.encode_cell({r,c:6}),formulas:['"'+preses.join(',')+'"'],allowBlank:true,showDropDown:false});
-      }
-      ws['!dataValidation']=dvs;
-      const wb=X.utils.book_new();X.utils.book_append_sheet(wb,ws,'Materiales');
-      const refData=[['PARTIDA','SUBLÍNEA','CUÁNDO USAR'],['TERMINACION DE MURO','(vacío)','Insumo fijo (Cave Polflex, molduras)'],['TERMINACION DE MURO','ceramica','Adhesivo, fragüe, esquineros'],['TERMINACION DE MURO','pintura','Pasta muro'],['TERMINACION DE MURO','pintura_latex','Pintura látex'],['TERMINACION DE MURO','pintura_esmalte','Pintura esmalte al agua'],[''],['PISO','(vacío)','Insumo fijo'],['PISO','ceramica','Cerámica de piso'],['PISO','vinilico','Piso vinílico'],['PISO','porcelanato','Porcelanato'],[''],['SANITARIO ARTEFACTOS','(vacío)','Insumo fijo'],['SANITARIO ARTEFACTOS','tina','Tina/receptáculo'],['SANITARIO ARTEFACTOS','lavamanos','Lavamanos'],['SANITARIO ARTEFACTOS','grif_lav','Grifería lavamanos'],['SANITARIO ARTEFACTOS','grif_tina','Grifería tina/ducha'],[''],['REVESTIMIENTO DE MURO','revRH125','YC zona húmeda'],['REVESTIMIENTO DE MURO','revFibro','Fibrocemento faldón'],[''],['PUERTAS','puerta','Puerta seleccionable'],['PUERTAS','cerradura','Cerradura seleccionable'],[''],['NOTA:','','Las demás partidas no usan sublínea']];
-      const wsRef=X.utils.aoa_to_sheet(refData);wsRef['!cols']=[{wch:28},{wch:20},{wch:50}];
-      X.utils.book_append_sheet(wb,wsRef,'Guía Sublíneas');
-      X.writeFile(wb,'Plantilla_MAYU_Materiales.xlsx');
-      nfy('Plantilla con validaciones descargada.');
-    }catch(e){nfy('Error al generar plantilla.','error');}finally{setBusy(false);}
+  const dlTemplate=()=>{
+    const a=document.createElement('a');a.href='/Plantilla_MAYU_Materiales.xlsx';a.download='Plantilla_MAYU_Materiales.xlsx';a.click();
+    nfy('Plantilla descargada.');
   };
   const uploadFile=async(e)=>{
     const f=e.target.files[0];if(!f)return;setBusy(true);
@@ -1188,7 +1165,7 @@ const AutoStage=({title,badge,badgeColor,desc,items,total,subtitle,children})=>(
               :<div className="bg-white rounded-2xl border shadow-sm overflow-hidden"><table className="w-full text-left border-collapse"><thead><tr className="bg-slate-100 text-slate-600 text-xs uppercase tracking-wider"><th className="p-3 border-b w-1/3">Partida</th><th className="p-3 border-b text-center">Items</th><th className="p-3 border-b text-right">Costo Mat.</th><th className="p-3 border-b text-right font-bold">Total</th><th className="p-3 border-b w-14"></th></tr></thead><tbody className="text-sm">
                 {Object.entries(calc.bomByCategory).map(([cat,items])=>{const t=calc.costsByCategory[cat];return(<tr key={cat} onClick={()=>setSelCat(cat)} className="border-b cursor-pointer hover:bg-slate-50 group"><td className="p-4 font-semibold flex items-center gap-2"><Layers size={16} className="text-blue-500"/>{cat}</td><td className="p-4 text-center font-bold text-slate-500">{items.length}</td><td className="p-4 text-right text-slate-600">{fmtC(t.materialCost)}</td><td className="p-4 text-right font-bold border-l">{fmtC(t.totalCost)}</td><td className="p-4 text-center"><button className="text-blue-600 bg-blue-100 p-2 rounded-full group-hover:bg-blue-600 group-hover:text-white"><Search size={16}/></button></td></tr>);})}
               </tbody></table></div>}
- 
+
             </div>
           )}
           {/* TAB DASHBOARD */}
@@ -1242,7 +1219,6 @@ const AutoStage=({title,badge,badgeColor,desc,items,total,subtitle,children})=>(
                     {busy?<span className="bg-slate-100 text-slate-500 px-4 py-2 rounded-lg text-sm">Procesando...</span>
                     :<label className="bg-blue-600 text-white px-4 py-2.5 rounded-xl cursor-pointer hover:bg-blue-700 text-sm shadow-md flex items-center gap-2 font-medium"><UploadCloud size={16}/> Subir Excel<input type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={uploadFile} disabled={busy}/></label>}
                     <button onClick={dlTemplate} disabled={busy} className="bg-white border border-blue-600 text-blue-600 px-4 py-2.5 rounded-xl hover:bg-blue-50 text-sm shadow-sm flex items-center gap-2 font-medium disabled:opacity-50"><Download size={16}/> Plantilla</button>
-                    <label className="bg-blue-50 border border-blue-300 text-blue-600 px-3 py-2.5 rounded-xl hover:bg-blue-100 cursor-pointer" title="Subir Excel"><UploadCloud size={16}/><input type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={uploadFile} disabled={busy}/></label>
                   </div>
                 </div>
                 <div className="bg-white p-6 rounded-2xl border shadow-sm flex flex-col justify-center relative overflow-hidden">
