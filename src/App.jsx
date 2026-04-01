@@ -147,8 +147,8 @@ export default function App() {
   const [showClear,setShowClear] = useState(false);
   const [mobMenu,setMobMenu] = useState(false);
   const [mats,setMats] = useState([]);
-  const [proj,setProj] = useState({name:'Cotización B2B',client:'',marginPct:20,contingencyPct:5});
-  const [typs,setTyps] = useState([defTyp]);
+  const [proj,setProj] = useState(()=>{try{const s=localStorage.getItem('mayu_proj');return s?JSON.parse(s):{name:'Cotización B2B',client:'',clientRut:'',clientAddress:'',clientPhone:'',clientEmail:'',contactName:'',marginPct:20,contingencyPct:5};}catch(e){return{name:'Cotización B2B',client:'',clientRut:'',clientAddress:'',clientPhone:'',clientEmail:'',contactName:'',marginPct:20,contingencyPct:5};}});
+  const [typs,setTyps] = useState(()=>{try{const s=localStorage.getItem('mayu_typs');return s?JSON.parse(s):[defTyp];}catch(e){return[defTyp];}});
   const [actTypId,setActTypId] = useState(typs[0]?.id);
   const [matFilt,setMatFilt] = useState({code:'',cat:'',name:'',pres:''});
   const [showManual,setShowManual] = useState(false);
@@ -315,9 +315,16 @@ export default function App() {
       {id:'POD_153',cat:'INSUMOS GENERALES',name:'Tarugo de nylon 5 mm 100 unidades',brand:'Mr. build',unit:'UNIDAD',cost:3400.0,baseQty:0.09,pres:'Bolsa 100un'},
       {id:'POD_154',cat:'INSUMOS GENERALES',name:'Golilla Plana Zincada 1/4 (100 Unidades)',brand:'S',unit:'UNIDAD',cost:6890.0,baseQty:0.04,pres:'Bolsa 100un'}
     ];
+    const saved = localStorage.getItem('mayu_materialsDb');
+    if (saved) {
+      try { const parsed = JSON.parse(saved); if (parsed.length > 0) { setMats(parsed); nfy(`Biblioteca cargada: ${parsed.length} ítems.`); return; } } catch(e) {}
+    }
     setMats(demoMats.map(m => ({ waste:0,laborY:0,laborC:0,techSheetName:'',techSheetData:'',...m, catOriginal: m.cat, cat: classifyToStage(m.cat) })));
     nfy("BOM Baumax cargado: 153 ítems reales con precios y cantidades comerciales por POD.");
   },[]);
+  useEffect(()=>{if(mats.length>0)localStorage.setItem('mayu_materialsDb',JSON.stringify(mats));},[mats]);
+  useEffect(()=>{localStorage.setItem('mayu_proj',JSON.stringify(proj));},[proj]);
+  useEffect(()=>{localStorage.setItem('mayu_typs',JSON.stringify(typs));},[typs]);
   useEffect(()=>{if(notif){const t=setTimeout(()=>setNotif(null),4000);return()=>clearTimeout(t);}},[notif]);
   const saveToCRM = async()=>{
     setBusy(true);
@@ -449,7 +456,7 @@ export default function App() {
   };
   const editClick=(m)=>{setEditId(m.id);setManItem({code:m.id,cat:m.cat,name:m.name,brand:m.brand||'',unit:m.unit||'UNIDAD',cost:m.cost,qty:m.baseQty,pres:m.pres||'',tsN:m.techSheetName||'',tsD:m.techSheetData||'',subline:m.termGroup||m.pisoGroup||m.slot||m.revRole||''});setShowManual(true);};
   const confirmDel=async()=>{if(!delId)return;setMats(p=>p.filter(m=>m.id!==delId));nfy("Eliminado.");setDelId(null);};
-  const clearAll=()=>{setMats([]);localStorage.removeItem('mayu_materialsDb');setProj({name:'Nuevo Proyecto',client:'',marginPct:20,contingencyPct:5});const nid=`typ-${Date.now()}`;setTyps([{...defTyp,id:nid}]);setActTypId(nid);setShowClear(false);nfy("Memoria borrada.");};
+  const clearAll=()=>{localStorage.removeItem('mayu_materialsDb');localStorage.removeItem('mayu_proj');localStorage.removeItem('mayu_typs');setMats([]);setProj({name:'Nuevo Proyecto',client:'',clientRut:'',clientAddress:'',clientPhone:'',clientEmail:'',contactName:'',marginPct:20,contingencyPct:5});const nid=`typ-${Date.now()}`;setTyps([{...defTyp,id:nid}]);setActTypId(nid);setShowClear(false);nfy("Memoria borrada.");};
   const exportXls=async()=>{
     setBusy(true);
     try{
@@ -1235,7 +1242,7 @@ const AutoStage=({title,badge,badgeColor,desc,items,total,subtitle,children})=>(
                     {busy?<span className="bg-slate-100 text-slate-500 px-4 py-2 rounded-lg text-sm">Procesando...</span>
                     :<label className="bg-blue-600 text-white px-4 py-2.5 rounded-xl cursor-pointer hover:bg-blue-700 text-sm shadow-md flex items-center gap-2 font-medium"><UploadCloud size={16}/> Subir Excel<input type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={uploadFile} disabled={busy}/></label>}
                     <button onClick={dlTemplate} disabled={busy} className="bg-white border border-blue-600 text-blue-600 px-4 py-2.5 rounded-xl hover:bg-blue-50 text-sm shadow-sm flex items-center gap-2 font-medium disabled:opacity-50"><Download size={16}/> Plantilla</button>
-                    <button onClick={()=>dlTemplate()} className="bg-blue-50 border border-blue-300 text-blue-600 px-3 py-2.5 rounded-xl hover:bg-blue-100" title="Personalizada"><Settings size={16}/></button>
+                    <label className="bg-blue-50 border border-blue-300 text-blue-600 px-3 py-2.5 rounded-xl hover:bg-blue-100 cursor-pointer" title="Subir Excel"><UploadCloud size={16}/><input type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={uploadFile} disabled={busy}/></label>
                   </div>
                 </div>
                 <div className="bg-white p-6 rounded-2xl border shadow-sm flex flex-col justify-center relative overflow-hidden">
