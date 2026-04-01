@@ -137,7 +137,7 @@ const ResBadge = ({label,value}) => (
     <span className="font-bold text-emerald-400">{value}</span>
   </div>
 );
-
+ 
 export default function App() {
   const [tab,setTab] = useState('project');
   const [selCat,setSelCat] = useState(null);
@@ -1188,7 +1188,7 @@ const AutoStage=({title,badge,badgeColor,desc,items,total,subtitle,children})=>(
               :<div className="bg-white rounded-2xl border shadow-sm overflow-hidden"><table className="w-full text-left border-collapse"><thead><tr className="bg-slate-100 text-slate-600 text-xs uppercase tracking-wider"><th className="p-3 border-b w-1/3">Partida</th><th className="p-3 border-b text-center">Items</th><th className="p-3 border-b text-right">Costo Mat.</th><th className="p-3 border-b text-right font-bold">Total</th><th className="p-3 border-b w-14"></th></tr></thead><tbody className="text-sm">
                 {Object.entries(calc.bomByCategory).map(([cat,items])=>{const t=calc.costsByCategory[cat];return(<tr key={cat} onClick={()=>setSelCat(cat)} className="border-b cursor-pointer hover:bg-slate-50 group"><td className="p-4 font-semibold flex items-center gap-2"><Layers size={16} className="text-blue-500"/>{cat}</td><td className="p-4 text-center font-bold text-slate-500">{items.length}</td><td className="p-4 text-right text-slate-600">{fmtC(t.materialCost)}</td><td className="p-4 text-right font-bold border-l">{fmtC(t.totalCost)}</td><td className="p-4 text-center"><button className="text-blue-600 bg-blue-100 p-2 rounded-full group-hover:bg-blue-600 group-hover:text-white"><Search size={16}/></button></td></tr>);})}
               </tbody></table></div>}
-
+ 
             </div>
           )}
           {/* TAB DASHBOARD */}
