@@ -175,8 +175,8 @@ export default function App() {
       {id:'EST-G01',cat:'ESTRUCTURA',name:'Placa Gusset_01 Galvanizado 1mm',brand:'LASERCUT',unit:'UNIDAD',cost:2567,baseQty:2,pres:'Pieza'},
       {id:'EST-G03',cat:'ESTRUCTURA',name:'Placa Gusset_03 ESQ Galvanizado 1mm',brand:'LASERCUT',unit:'UNIDAD',cost:3009,baseQty:7,pres:'Pieza'},
       {id:'EST-G05',cat:'ESTRUCTURA',name:'Placa Gusset_05 ESQ Galvanizado 1mm',brand:'LASERCUT',unit:'UNIDAD',cost:3009,baseQty:1,pres:'Pieza'},
-      {id:'EST-IZQIZJ',cat:'ESTRUCTURA',name:'Placa Externa Izaje IZQ Acero Carbono 3mm',brand:'LASERCUT',unit:'UNIDAD',cost:7035,baseQty:2,pres:'Pieza'},
-      {id:'EST-DERIZJ',cat:'ESTRUCTURA',name:'Placa Externa Izaje DER Acero Carbono 3mm',brand:'LASERCUT',unit:'UNIDAD',cost:7031,baseQty:2,pres:'Pieza'},
+      {id:'EST-IZQIZJ',cat:'ESTRUCTURA',name:'Placa Externa Izaje IZQ Acero Carbono 3mm',brand:'LASERCUT',unit:'UNIDAD',cost:7035,baseQty:2,pres:'fijo'},
+      {id:'EST-DERIZJ',cat:'ESTRUCTURA',name:'Placa Externa Izaje DER Acero Carbono 3mm',brand:'LASERCUT',unit:'UNIDAD',cost:7031,baseQty:2,pres:'fijo'},
       {id:'EST-ANGTENS',cat:'ESTRUCTURA',name:'Ángulo Tensor 40x40 L=70mm',brand:'STEELFIX',unit:'UNIDAD',cost:879,baseQty:6,pres:'Pieza'},
       {id:'EST-TLENT',cat:'ESTRUCTURA',name:'Tornillo Lenteja 8-18 x 1/2" (ensamble general)',brand:'STEELFIX',unit:'UNIDAD',cost:9.89,baseQty:1050,pres:'Unidad'},
       {id:'EST-THEX',cat:'ESTRUCTURA',name:'Tornillo Hexagonal 10-16 x 3/4" (fijación base+cielo)',brand:'STEELFIX',unit:'UNIDAD',cost:47,baseQty:250,pres:'Unidad'},
@@ -362,10 +362,28 @@ export default function App() {
     setBusy(true);
     try{
       const X=await import('https://esm.sh/xlsx');
-      const d=[["PARTIDA CONSTRUCTIVA","CODIGO DE PRODUCTO","DESCRIPCION DEL PRODUCTO","PROVEEDOR / MARCA","UNIDAD DE MEDIDA","COSTO NETO UNITARIO","CANTIDAD COMERCIAL"],["ESTRUCTURA","EST-001","MONTANTE 90MM","IMEL","KG",2500,1]];
-      const ws=X.utils.aoa_to_sheet(d);const wb=X.utils.book_new();X.utils.book_append_sheet(wb,ws,"Plantilla");X.writeFile(wb,"Plantilla_MAYU.xlsx");
-      nfy("Plantilla descargada.");
-    }catch(e){nfy("Error.",'error');}finally{setBusy(false);}
+      const partidas=STAGES.map(s=>s.cat);
+      const allSubs=['(sin sublínea)','ceramica','pintura','pintura_latex','pintura_esmalte','vinilico','porcelanato','tina','wc_tanque','wc_taza','wc_asiento','lavamanos','pedestal','grif_lav','grif_tina','extractor','revRH125','revRF125','revST125','revST10','revFibro','puerta','cerradura'];
+      const unidades=['UNIDAD','MT LINEAL','MT2','KG','CAJA','LITRO','GALON','ROLLO','SET','SACO','PAR'];
+      const preses=['Unidad','Caja','Saco','Rollo','Tineta','Galón','kg','MT2','metro lineal','Bolsa','Tira','Set','Pieza','fijo'];
+      const hdr=[['CÓDIGO','PARTIDA CONSTRUCTIVA','SUBLÍNEA','DESCRIPCIÓN DEL PRODUCTO','PROVEEDOR / MARCA','UNIDAD DE MEDIDA','PRESENTACIÓN','COSTO NETO UNITARIO','CANTIDAD / POD']];
+      const ws=X.utils.aoa_to_sheet(hdr);
+      ws['!cols']=[{wch:14},{wch:30},{wch:22},{wch:45},{wch:22},{wch:18},{wch:18},{wch:20},{wch:16}];
+      const dvs=[];
+      for(let r=1;r<=300;r++){
+        dvs.push({type:'list',operator:'equal',sqref:X.utils.encode_cell({r,c:1}),formulas:['"'+partidas.join(',')+'"'],showDropDown:false,showErrorMessage:true,errorTitle:'Partida no válida',error:'Solo se permiten las 13 líneas definidas.'});
+        dvs.push({type:'list',operator:'equal',sqref:X.utils.encode_cell({r,c:2}),formulas:['"'+allSubs.join(',')+'"'],allowBlank:true,showDropDown:false,showErrorMessage:true,errorTitle:'Sublínea no válida',error:'Solo sublíneas definidas. Vacío = ítem fijo.'});
+        dvs.push({type:'list',operator:'equal',sqref:X.utils.encode_cell({r,c:5}),formulas:['"'+unidades.join(',')+'"'],showDropDown:false});
+        dvs.push({type:'list',operator:'equal',sqref:X.utils.encode_cell({r,c:6}),formulas:['"'+preses.join(',')+'"'],allowBlank:true,showDropDown:false});
+      }
+      ws['!dataValidation']=dvs;
+      const wb=X.utils.book_new();X.utils.book_append_sheet(wb,ws,'Materiales');
+      const refData=[['PARTIDA','SUBLÍNEA','CUÁNDO USAR'],['TERMINACION DE MURO','(vacío)','Insumo fijo (Cave Polflex, molduras)'],['TERMINACION DE MURO','ceramica','Adhesivo, fragüe, esquineros'],['TERMINACION DE MURO','pintura','Pasta muro'],['TERMINACION DE MURO','pintura_latex','Pintura látex'],['TERMINACION DE MURO','pintura_esmalte','Pintura esmalte al agua'],[''],['PISO','(vacío)','Insumo fijo'],['PISO','ceramica','Cerámica de piso'],['PISO','vinilico','Piso vinílico'],['PISO','porcelanato','Porcelanato'],[''],['SANITARIO ARTEFACTOS','(vacío)','Insumo fijo'],['SANITARIO ARTEFACTOS','tina','Tina/receptáculo'],['SANITARIO ARTEFACTOS','lavamanos','Lavamanos'],['SANITARIO ARTEFACTOS','grif_lav','Grifería lavamanos'],['SANITARIO ARTEFACTOS','grif_tina','Grifería tina/ducha'],[''],['REVESTIMIENTO DE MURO','revRH125','YC zona húmeda'],['REVESTIMIENTO DE MURO','revFibro','Fibrocemento faldón'],[''],['PUERTAS','puerta','Puerta seleccionable'],['PUERTAS','cerradura','Cerradura seleccionable'],[''],['NOTA:','','Las demás partidas no usan sublínea']];
+      const wsRef=X.utils.aoa_to_sheet(refData);wsRef['!cols']=[{wch:28},{wch:20},{wch:50}];
+      X.utils.book_append_sheet(wb,wsRef,'Guía Sublíneas');
+      X.writeFile(wb,'Plantilla_MAYU_Materiales.xlsx');
+      nfy('Plantilla con validaciones descargada.');
+    }catch(e){nfy('Error al generar plantilla.','error');}finally{setBusy(false);}
   };
   const uploadFile=async(e)=>{
     const f=e.target.files[0];if(!f)return;setBusy(true);
@@ -375,21 +393,42 @@ export default function App() {
       if(!rows.length)throw new Error("Vacío");
       const hdr=rows[0].map(h=>String(h||'').toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim());
       let iP=hdr.findIndex(h=>h.includes('PARTIDA'));if(iP===-1)iP=1;
-      let iC=hdr.findIndex(h=>h.includes('CODIGO')||h==='SKU');if(iC===-1)iC=2;
+      let iC=hdr.findIndex(h=>h.includes('CODIGO')||h==='SKU');if(iC===-1)iC=0;
       let iD=hdr.findIndex(h=>h.includes('DESCRIPCION'));if(iD===-1)iD=3;
-      let iPr=hdr.findIndex(h=>h.includes('PROVEEDOR')||h.includes('MARCA'));if(iPr===-1)iPr=12;
-      let iU=hdr.findIndex(h=>h.includes('UNIDAD'));if(iU===-1)iU=4;
-      let iCo=hdr.findIndex(h=>h.includes('COSTO')||h.includes('PRECIO'));if(iCo===-1)iCo=6;
-      let iCa=hdr.findIndex(h=>h.includes('CANTIDAD'));if(iCa===-1)iCa=5;
+      let iPr=hdr.findIndex(h=>h.includes('PROVEEDOR')||h.includes('MARCA'));if(iPr===-1)iPr=4;
+      let iU=hdr.findIndex(h=>h.includes('UNIDAD'));if(iU===-1)iU=5;
+      let iCo=hdr.findIndex(h=>h.includes('COSTO')||h.includes('PRECIO'));if(iCo===-1)iCo=7;
+      let iCa=hdr.findIndex(h=>h.includes('CANTIDAD'));if(iCa===-1)iCa=8;
+      let iSub=hdr.findIndex(h=>h.includes('SUBLINEA')||h.includes('SUBLINEA'));
+      let iPres=hdr.findIndex(h=>h.includes('PRESENTACION'));
       const ndb=[];
-      rows.slice(1,154).forEach((r,idx)=>{
+      rows.slice(1,500).forEach((r,idx)=>{
         const cat=String(r[iP]||'').trim().toUpperCase();const nm=String(r[iD]||'').trim();
-        if(!cat||!nm||nm.toLowerCase().includes('total:'))return;
+        if(!cat||!nm||nm.toLowerCase().includes('total:')||nm.toLowerCase().includes('ejemplo'))return;
         const cs=String(r[iC]||'').trim();const fid=cs||`Fila_${idx+2}`;
-        ndb.push({id:fid,cat:classifyToStage(cat),catOriginal:cat,name:nm,brand:r[iPr]?String(r[iPr]).trim():'',unit:r[iU]?String(r[iU]).trim().toUpperCase():'UNIDAD',cost:parseFloat(String(r[iCo]||'0').replace(',','.'))||0,baseQty:parseFloat(String(r[iCa]||'0').replace(',','.'))||0,waste:0,laborY:0,laborC:0,pres:'',techSheetName:'',techSheetData:''});
+        const sub=iSub>=0?String(r[iSub]||'').trim():'';
+        const pres=iPres>=0?String(r[iPres]||'').trim():'';
+        const classified=classifyToStage(cat);
+        const subProps={};
+        if(sub && sub!=='(sin sublínea)'){
+          if(classified==='TERMINACION DE MURO')subProps.termGroup=sub;
+          else if(classified==='PISO')subProps.pisoGroup=sub;
+          else if(classified==='SANITARIO ARTEFACTOS'||classified==='PUERTAS')subProps.slot=sub;
+          else if(classified==='REVESTIMIENTO DE MURO')subProps.revRole=sub;
+        }
+        ndb.push({id:fid,cat:classified,catOriginal:cat,name:nm,brand:r[iPr]?String(r[iPr]).trim():'',unit:r[iU]?String(r[iU]).trim().toUpperCase():'UNIDAD',cost:parseFloat(String(r[iCo]||'0').replace(',','.'))||0,baseQty:parseFloat(String(r[iCa]||'0').replace(',','.'))||0,waste:0,laborY:0,laborC:0,pres:pres,techSheetName:'',techSheetData:'',...subProps});
       });
-      setMats(ndb);
-      nfy(`${ndb.length} ítems integrados.`);
+      setMats(prev => {
+        const merged = [...prev];
+        let added = 0, updated = 0;
+        ndb.forEach(newItem => {
+          const idx = merged.findIndex(m => m.id === newItem.id);
+          if (idx >= 0) { merged[idx] = {...merged[idx], ...newItem}; updated++; }
+          else { merged.push(newItem); added++; }
+        });
+        nfy(`${added} ítems nuevos, ${updated} actualizados. Total: ${merged.length}`);
+        return merged;
+      });
     }catch(e){nfy("Error procesando Excel.",'error');}finally{setBusy(false);e.target.value=null;}
   };
   const procTS=(f,cb)=>{if(!f)return;if(f.size>2*1024*1024){nfy("Max 2MB.",'error');return;}const r=new FileReader();r.onload=ev=>cb(f.name,ev.target.result);r.readAsDataURL(f);};
@@ -505,7 +544,7 @@ export default function App() {
               if(confKey && c[confKey]===mat.id){pQ=mat.baseQty;isP=true;}
             } else {pQ=mat.baseQty;isP=true;}
           }
-          if(mat.cat==='ESTRUCTURA'){const areaRatio=nwa/EST_REF_AREA_NETA;pQ=mat.baseQty*areaRatio*(mat.pres==='kg'?1:(1+EST_MERMA));isP=true;}
+          if(mat.cat==='ESTRUCTURA'){if(mat.pres==='fijo'){pQ=mat.baseQty;}else{const areaRatio=nwa/EST_REF_AREA_NETA;pQ=mat.baseQty*areaRatio*(mat.pres==='kg'?1:(1+EST_MERMA));}isP=true;}
           if(mat.cat==='INSUMOS GENERALES'){pQ=mat.baseQty;isP=true;}
           if(mat.cat==='TECHO'){const PLANCHA_TECHO_M2=2.9768;pQ=Math.ceil(ca/PLANCHA_TECHO_M2);isP=true;}
           if(mat.cat==='PUERTAS'){
