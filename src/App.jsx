@@ -29,10 +29,10 @@ const MO_COSTO_MENSUAL = 14840000;  // Costo empresa equipo operarios/mes
 const MO_PODS_SEMANA = 10;           // Capacidad producción semanal
 const MO_SEMANAS_MES = 52/12;        // 4.333 semanas/mes
 const MO_COST_POD = Math.round(MO_COSTO_MENSUAL / (MO_PODS_SEMANA * MO_SEMANAS_MES)); // $342.644/POD   // Conservador sobre YC nuevo (ficha: 135, terreno ~105)
-const EST_REF_AREA_NETA = 15.36;
+const EST_REF_AREA_NETA = 16.74;
 const EST_REF_KG = 104.6;
 const EST_MERMA = 0.05;
-const BASE_REF_AREA_PISO = 3.14;
+const BASE_REF_AREA_PISO = 3.52;
 const STAGES = [
       {id:'base',label:'1. Base',cat:'BASE',icon:Home},
       {id:'estructura',label:'2. Estructura',cat:'ESTRUCTURA',icon:Box},
@@ -162,12 +162,12 @@ export default function App() {
   const nfy = useCallback((m,t='success')=>setNotif({message:m,type:t}),[]);
   useEffect(()=>{
     const demoMats = [
-      {id:'EST-P01',cat:'ESTRUCTURA',name:'M-01 Panel Frontal (con puerta)',brand:'IMEL',unit:'UNIDAD',cost:35479,baseQty:1,pres:'Panel prearmado'},
-      {id:'EST-P02',cat:'ESTRUCTURA',name:'M-02 Panel Izquierdo',brand:'IMEL',unit:'UNIDAD',cost:39968,baseQty:1,pres:'Panel prearmado'},
-      {id:'EST-P03',cat:'ESTRUCTURA',name:'M-03 Panel Posterior',brand:'IMEL',unit:'UNIDAD',cost:47904,baseQty:1,pres:'Panel prearmado'},
-      {id:'EST-P04',cat:'ESTRUCTURA',name:'M-04 Panel Derecho',brand:'IMEL',unit:'UNIDAD',cost:23809,baseQty:1,pres:'Panel prearmado'},
-      {id:'EST-P05',cat:'ESTRUCTURA',name:'M-05 Parrilla Cielo',brand:'IMEL',unit:'UNIDAD',cost:44823,baseQty:1,pres:'Panel prearmado'},
-      {id:'EST-P06',cat:'ESTRUCTURA',name:'M-06 Faldón Tina',brand:'IMEL',unit:'UNIDAD',cost:8018,baseQty:1,pres:'Panel prearmado'},
+      {id:'EST-P01',cat:'ESTRUCTURA',name:'M-01 Panel Frontal (con puerta)',brand:'IMEL',unit:'KG',cost:2095,baseQty:16.9,pres:'kg'},
+      {id:'EST-P02',cat:'ESTRUCTURA',name:'M-02 Panel Izquierdo',brand:'IMEL',unit:'KG',cost:2095,baseQty:19.1,pres:'kg'},
+      {id:'EST-P03',cat:'ESTRUCTURA',name:'M-03 Panel Posterior',brand:'IMEL',unit:'KG',cost:2095,baseQty:22.9,pres:'kg'},
+      {id:'EST-P04',cat:'ESTRUCTURA',name:'M-04 Panel Derecho',brand:'IMEL',unit:'KG',cost:2095,baseQty:11.4,pres:'kg'},
+      {id:'EST-P05',cat:'ESTRUCTURA',name:'M-05 Parrilla Cielo',brand:'IMEL',unit:'KG',cost:2095,baseQty:21.4,pres:'kg'},
+      {id:'EST-P06',cat:'ESTRUCTURA',name:'M-06 Faldón Tina',brand:'IMEL',unit:'KG',cost:2095,baseQty:3.8,pres:'kg'},
       {id:'EST-CA40',cat:'ESTRUCTURA',name:'Montante Estructural CA 2x2x0,85mm (pre-dimensión)',brand:'IMEL',unit:'UNIDAD',cost:1702,baseQty:0.25,pres:'Barra 6m'},
       {id:'EST-U42',cat:'ESTRUCTURA',name:'Canal Estructural U 2x2x0,85mm (6m)',brand:'IMEL',unit:'UNIDAD',cost:3410,baseQty:0.7,pres:'Barra 6m'},
       {id:'EST-U153',cat:'ESTRUCTURA',name:'Canal Estructural U 2x6x0,85mm (6m)',brand:'IMEL',unit:'UNIDAD',cost:8349,baseQty:0.5,pres:'Barra 6m'},
@@ -505,7 +505,7 @@ export default function App() {
               if(confKey && c[confKey]===mat.id){pQ=mat.baseQty;isP=true;}
             } else {pQ=mat.baseQty;isP=true;}
           }
-          if(mat.cat==='ESTRUCTURA'){const areaRatio=nwa/EST_REF_AREA_NETA;pQ=mat.baseQty*areaRatio*(1+EST_MERMA);isP=true;}
+          if(mat.cat==='ESTRUCTURA'){const areaRatio=nwa/EST_REF_AREA_NETA;pQ=mat.baseQty*areaRatio*(mat.pres==='kg'?1:(1+EST_MERMA));isP=true;}
           if(mat.cat==='INSUMOS GENERALES'){pQ=mat.baseQty;isP=true;}
           if(mat.cat==='TECHO'){const PLANCHA_TECHO_M2=2.9768;pQ=Math.ceil(ca/PLANCHA_TECHO_M2);isP=true;}
           if(mat.cat==='PUERTAS'){
