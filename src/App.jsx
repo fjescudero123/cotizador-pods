@@ -31,6 +31,8 @@ const MO_COSTO_MENSUAL = 14840000;  // Costo empresa equipo operarios/mes
 const MO_PODS_SEMANA = 10;           // Capacidad producción semanal
 const MO_SEMANAS_MES = 52/12;        // 4.333 semanas/mes
 const MO_COST_POD = Math.round(MO_COSTO_MENSUAL / (MO_PODS_SEMANA * MO_SEMANAS_MES)); // $342.644/POD   // Conservador sobre YC nuevo (ficha: 135, terreno ~105)
+const REND_CUARZ_M2_TINETA = 23.5;  // FT TX-Cuarz PRO: consumo 425g/m²/capa × 2 capas = 0.85kg/m² → tineta 20kg / 0.85
+const REND_MORTERO_M2_SACO = 1.55;  // FT Mortero Autoniv.: rend. saco ~15.5L, espesor 10mm → 15.5L / 10L/m² = 1.55 m²/saco
 const EST_REF_AREA_NETA = 16.74;
 const EST_REF_KG = 104.6;
 const EST_MERMA = 0.05;
@@ -189,7 +191,7 @@ export default function App() {
       {id:'EST-THEX',cat:'ESTRUCTURA',name:'Tornillo Hexagonal 10-16 x 3/4" (fijación base+cielo)',brand:'STEELFIX',unit:'UNIDAD',cost:47,baseQty:250,pres:'Unidad'},
       {id:'EST-TAPE',cat:'ESTRUCTURA',name:'Max Tape 10x6mm (Rollo 10m)',unit:'UNIDAD',cost:11700,baseQty:0.5,pres:'Rollo 10m'},
       {id:'EST-TLENT1',cat:'ESTRUCTURA',name:'Tornillo Lenteja 8-18 x 1" (pilares compuestos)',brand:'STEELFIX',unit:'UNIDAD',cost:15,baseQty:100,pres:'Unidad'},
-      {id:'BASE-TARIMA',cat:'BASE',name:'Tarima Base POD (placa estructural)',brand:'APPSA',unit:'MT2',cost:82386.0,baseQty:3.52,pres:'MT2'},
+      {id:'BASE-TARIMA',cat:'BASE',name:'Tarima Base POD (placa estructural)',brand:'APPSA',unit:'MT2',cost:155000,baseQty:3.52,pres:'MT2'},
       {id:'POD_022',cat:'PUERTAS',name:'LISTON IMPREGNADO CEPILLADO 1 1/2 X 2¨',brand:'LIFEWOOD',unit:'UNIDAD',cost:2190.0,baseQty:2.0,pres:'Unidad'},
       {id:'POD_023',cat:'TECHO',name:'TERCIADO ESTRUCTURAL 1220 x 2440 x 9mm',brand:'CONSTRUPLAZA',unit:'UNIDAD',cost:16648.0,baseQty:1.3,pres:'Plancha 1220x2440mm'},
       {id:'CRI1988',cat:'ELECTRICO',name:'Tubo conduit C-IV 20 mm x 6 mt',brand:'S',unit:'UNIDAD',cost:1085.71,baseQty:0.5,pres:'Tubo 6m'},
@@ -270,8 +272,8 @@ export default function App() {
       {id:'POD_100',cat:'TERMINACION MURO - INSUMO',name:'Espaciador 2 mm con tomador',brand:'S',unit:'UNIDAD',cost:2290.0,baseQty:0.5,pres:'Unidad',termGroup:'ceramica'},
       {id:'CTE042',cat:'TERMINACION MURO - INSUMO',name:'Fragüe piso/muro blanco 5kg BECKRON',brand:'S',unit:'UNIDAD',cost:2290.0,baseQty:2.0,pres:'Saco 5kg',termGroup:'ceramica'},
       {id:'CRI1170_101',cat:'CIELO - INSUMO',name:'Tornillo B-Phillips zincado punta broca 6 - 20 x 1 1/4¨ (000-168)',brand:'STEELFIX',unit:'UNIDAD',cost:5.4,baseQty:100.0,pres:'Unidad'},
-      {id:'BASE-CUARZ',cat:'BASE',name:'TX-Cuarz PRO (puente adherente 2 capas)',brand:'Grupo TX',unit:'UNIDAD',cost:55000.0,baseQty:0.1,pres:'Tineta 20kg'},
-      {id:'BASE-MORTERO',cat:'BASE',name:'TX-Mortero Autonivelante con Fibra (saco 25kg)',brand:'Grupo TX',unit:'UNIDAD',cost:10140.0,baseQty:1.5,pres:'Saco 25kg'},
+      {id:'BASE-CUARZ',cat:'BASE',name:'TX-Cuarz PRO (puente adherente 2 capas)',brand:'Grupo TX',unit:'UNIDAD',cost:55000.0,baseQty:0.07,pres:'Tineta 20kg'},
+      {id:'BASE-MORTERO',cat:'BASE',name:'TX-Mortero Autonivelante con Fibra (saco 25kg)',brand:'Grupo TX',unit:'UNIDAD',cost:10140.0,baseQty:2.53,pres:'Saco 25kg'},
       {id:'CRI1216',cat:'PANEL MURO - INSUMO',name:'ILLBRUCK FM 310 ESPUMA DE POLIURETANO',brand:'CAVE',unit:'UNIDAD',cost:3050.0,baseQty:0.5,pres:'Lata'},
       {id:'CRI1214',cat:'TERMINACION CIELO - INSUMO',name:'ILLBRUCK PU010 ESPUMA ADHESIVA Lata 750ml',brand:'CAVE',unit:'UNIDAD',cost:6800.0,baseQty:0.5,pres:'Lata 750ml'},
       {id:'CRI1215',cat:'TERMINACION CIELO - INSUMO',name:'ILLBRUCK AA290 LIMPIADOR MILTIUSOS',brand:'CAVE',unit:'UNIDAD',cost:1220.0,baseQty:0.25,pres:'Botella'},
@@ -492,7 +494,7 @@ export default function App() {
       if(cnt>0){
         mats.forEach(mat=>{
           let tQ=0,w=mat.waste||0,isP=false,pQ=0;
-          if(mat.cat==='BASE'){if(mat.pres==='MT2'){pQ=fa;}else{const floorRatio=fa/BASE_REF_AREA_PISO;pQ=mat.baseQty*floorRatio*(1+EST_MERMA);}isP=true;}
+          if(mat.cat==='BASE'){const _bn=(mat.name||'').toUpperCase();if(mat.pres==='MT2'||mat.unit==='MT2'){pQ=fa;}else if(mat.id==='BASE-CUARZ'||_bn.includes('CUARZ')){pQ=fa/REND_CUARZ_M2_TINETA;}else if(mat.id==='BASE-MORTERO'||_bn.includes('MORTERO')){pQ=fa/REND_MORTERO_M2_SACO;}else{const floorRatio=fa/BASE_REF_AREA_PISO;pQ=mat.baseQty*floorRatio*(1+EST_MERMA);}isP=true;}
           if(mat.cat==='ELECTRICO'){if(mat.slot){const ek={iluminacion:'elecIluminacion'}[mat.slot];if(ek&&c[ek]===mat.id){pQ=mat.baseQty;isP=true;}}else{pQ=mat.baseQty;isP=true;}}
           if(mat.cat==='SANITARIO AGUA POTABLE'){pQ=mat.baseQty;isP=true;}
           if(mat.cat==='SANITARIO ALCANTARILLADO'){pQ=mat.baseQty;isP=true;}
@@ -623,9 +625,11 @@ export default function App() {
     );
     switch(sid){
       case 'base': {
-        const bi=mats.filter(m=>m.cat==='BASE');const br=bi.reduce((s,m)=>s+(m.baseQty*m.cost),0);const fr=BASE_REF_AREA_PISO>0?cm.floorArea/BASE_REF_AREA_PISO:0;const bc=br*fr*(1+EST_MERMA);
-        return <AutoStage title="Base POD" badge={`Auto · ${fmtN(fr)}x · 5% merma`} badgeColor="text-emerald-400 bg-emerald-900/50" items={bi} total={bc} desc={`Tarima + TX-Cuarz PRO + Mortero Autonivelante. Ref Baumax ${BASE_REF_AREA_PISO}m² = ${fmtC(br)}`}>
-          <div className="bg-slate-800/80 rounded-xl p-4"><div className="grid grid-cols-3 gap-3 text-center"><div><p className="text-[10px] text-slate-400 uppercase mb-1">Área piso</p><p className="text-lg font-bold">{fmtN(cm.floorArea)} m²</p></div><div><p className="text-[10px] text-slate-400 uppercase mb-1">Factor</p><p className="text-lg font-bold">{fmtN(fr)}x</p></div><div><p className="text-[10px] text-slate-400 uppercase mb-1">$/m²</p><p className="text-lg font-bold text-amber-400">{cm.floorArea>0?fmtC(bc/cm.floorArea):'-'}</p></div></div></div>
+        const bi=mats.filter(m=>m.cat==='BASE'&&!m.draft);const fa=cm.floorArea;const _isCont=(p)=>{const pl=(p||'').toLowerCase();return pl==='metro lineal'||pl==='kg'||pl==='mt2'||pl==='m2';};
+        const biCalc=bi.map(m=>{const mn=(m.name||'').toUpperCase();let q;if(m.pres==='MT2'||m.unit==='MT2'){q=fa;}else if(m.id==='BASE-CUARZ'||mn.includes('CUARZ')){q=fa/REND_CUARZ_M2_TINETA;}else if(m.id==='BASE-MORTERO'||mn.includes('MORTERO')){q=fa/REND_MORTERO_M2_SACO;}else{q=m.baseQty*(fa/BASE_REF_AREA_PISO)*(1+EST_MERMA);}const pq=Math.round(q*100)/100;return{...m,calcQty:pq,calcCost:pq*m.cost};});
+        const bc=biCalc.reduce((s,m)=>s+m.calcCost,0);
+        return <AutoStage title="Base POD" badge={`Auto · Rend. ficha técnica`} badgeColor="text-emerald-400 bg-emerald-900/50" items={biCalc} total={bc} desc={`Tarima ($155.000/m²) + TX-Cuarz PRO (${REND_CUARZ_M2_TINETA} m²/tineta) + Mortero (${fmtN(REND_MORTERO_M2_SACO)} m²/saco). Área piso: ${fmtN(fa)} m²`}>
+          <div className="bg-slate-800/80 rounded-xl p-4"><div className="grid grid-cols-3 gap-3 text-center"><div><p className="text-[10px] text-slate-400 uppercase mb-1">Área piso</p><p className="text-lg font-bold">{fmtN(fa)} m²</p></div><div><p className="text-[10px] text-slate-400 uppercase mb-1">Rendimiento</p><p className="text-sm font-bold">Ficha técnica</p></div><div><p className="text-[10px] text-slate-400 uppercase mb-1">$/m²</p><p className="text-lg font-bold text-amber-400">{fa>0?fmtC(bc/fa):'-'}</p></div></div></div>
         </AutoStage>;
       }
       case 'estructura': {
@@ -994,7 +998,7 @@ const AutoStage=({title,badge,badgeColor,desc,items,total,subtitle,children})=>(
 <div className="p-4 border-b border-slate-700/50 flex justify-between items-center"><h4 className="font-bold text-blue-400 text-sm uppercase">{title}</h4><span className={`text-[10px] ${badgeColor||'text-amber-400 bg-amber-900/50'} px-2 py-1 rounded font-bold`}>{badge}</span></div>
 <div className="p-5 space-y-4">{children}
 <div className="bg-emerald-900/40 border border-emerald-500/30 rounded-xl p-4 flex justify-between items-center"><div><p className="text-xs text-emerald-300/70 uppercase font-bold">{subtitle||'Total por POD'}</p></div><div className="text-right"><p className="text-2xl font-black text-emerald-400">{fmtC(total)}</p><p className="text-xs text-emerald-300/60 mt-0.5">{fmtUF(total)}</p></div></div>
-{items.length>0&&<div className="bg-slate-800/50 rounded-xl overflow-hidden"><div className="p-3 border-b border-slate-700/50 flex justify-between"><span className="text-[10px] text-slate-400 uppercase font-bold">Composición</span><span className="text-[10px] text-slate-500">{items.length} ítems</span></div><div className="max-h-40 overflow-y-auto">{items.map(m=><div key={m.id} className="flex items-center justify-between px-3 py-1 border-b border-slate-700/30 text-[11px]"><span className="text-slate-300 flex-1 truncate mr-2">{m.name}</span><span className="text-slate-500 w-12 text-right shrink-0">{m.baseQty}</span><span className="text-white font-medium w-16 text-right shrink-0">{fmtC(m.baseQty*m.cost)}</span></div>)}</div></div>}
+{items.length>0&&<div className="bg-slate-800/50 rounded-xl overflow-hidden"><div className="p-3 border-b border-slate-700/50 flex justify-between"><span className="text-[10px] text-slate-400 uppercase font-bold">Composición</span><span className="text-[10px] text-slate-500">{items.length} ítems</span></div><div className="flex items-center justify-between px-3 py-1.5 border-b border-slate-600/50 bg-slate-700/40"><span className="text-[9px] text-slate-400 uppercase font-bold flex-1">Material</span><span className="text-[9px] text-slate-400 uppercase font-bold w-12 text-right shrink-0">Qty/POD</span><span className="text-[9px] text-slate-400 uppercase font-bold w-16 text-right shrink-0">Costo/POD</span></div><div className="max-h-40 overflow-y-auto">{items.map(m=><div key={m.id} className="flex items-center justify-between px-3 py-1 border-b border-slate-700/30 text-[11px]"><span className="text-slate-300 flex-1 truncate mr-2">{m.name}</span><span className="text-slate-500 w-12 text-right shrink-0">{m.calcQty!=null?m.calcQty:m.baseQty}</span><span className="text-white font-medium w-16 text-right shrink-0">{fmtC(m.calcCost!=null?m.calcCost:(m.baseQty*m.cost))}</span></div>)}</div></div>}
 </div></div>{desc&&<div className="bg-slate-100 border rounded-xl p-3 text-xs text-slate-600 mt-2">{desc}</div>}</div>);
   const navTabs=[{id:'project',icon:<Layers size={18}/>,l:'Proyecto'},{id:'design',icon:<LayoutGrid size={18}/>,l:'Diseño'},{id:'bom',icon:<Calculator size={18}/>,l:'BOM'},{id:'dashboard',icon:<LayoutDashboard size={18}/>,l:'Dashboard'},{id:'database',icon:<Database size={18}/>,l:'Data'}];
   return(
