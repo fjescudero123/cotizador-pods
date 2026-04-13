@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "firebase": "^12.11.0",
-    "lucide-react": "^1.7.0",
+    "lucide-react": "^1.8.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "xlsx": "^0.18.5"
@@ -30,6 +30,6 @@
     "tailwindcss": "^4.2.2",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.57.2",
-    "vite": "^8.0.3"
+    "vite": "^8.0.4"
   }
 }
