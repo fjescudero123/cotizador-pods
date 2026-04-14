@@ -10,6 +10,7 @@ import { STAGES } from './constants/stages.js';
 import { defGeom, defConf, defTyp } from './constants/defaults.js';
 import { classifyToStage } from './utils/classify.js';
 import { fmtC, fmtN, fmtUF } from './utils/format.js';
+import { DEMO_MATS } from './constants/demoMats.js';
 import { CostChart } from './components/ui/CostChart.jsx';
 import { MAYU_LOGO_SVG } from './components/ui/MayuLogo.jsx';
 import { Notify } from './components/ui/Notify.jsx';
@@ -43,160 +44,8 @@ export default function App() {
   const actTyp = useMemo(()=>typs.find(t=>t.id===actTypId)||typs[0]||defTyp,[typs,actTypId]);
   const nfy = useCallback((m,t='success')=>setNotif({message:m,type:t}),[]);
   useEffect(()=>{
-    const demoMats = [
-      {id:'EST-P01',cat:'ESTRUCTURA',name:'M-01 Panel Frontal (con puerta)',brand:'IMEL',unit:'KG',cost:2095,baseQty:16.9,pres:'kg'},
-      {id:'EST-P02',cat:'ESTRUCTURA',name:'M-02 Panel Izquierdo',brand:'IMEL',unit:'KG',cost:2095,baseQty:19.1,pres:'kg'},
-      {id:'EST-P03',cat:'ESTRUCTURA',name:'M-03 Panel Posterior',brand:'IMEL',unit:'KG',cost:2095,baseQty:22.9,pres:'kg'},
-      {id:'EST-P04',cat:'ESTRUCTURA',name:'M-04 Panel Derecho',brand:'IMEL',unit:'KG',cost:2095,baseQty:11.4,pres:'kg'},
-      {id:'EST-P05',cat:'ESTRUCTURA',name:'M-05 Parrilla Cielo',brand:'IMEL',unit:'KG',cost:2095,baseQty:21.4,pres:'kg'},
-      {id:'EST-P06',cat:'ESTRUCTURA',name:'M-06 Faldón Tina',brand:'IMEL',unit:'KG',cost:2095,baseQty:3.8,pres:'kg'},
-      {id:'EST-CA40',cat:'ESTRUCTURA',name:'Montante Estructural CA 2x2x0,85mm (pre-dimensión)',brand:'IMEL',unit:'UNIDAD',cost:1702,baseQty:0.25,pres:'Barra 6m'},
-      {id:'EST-U42',cat:'ESTRUCTURA',name:'Canal Estructural U 2x2x0,85mm (6m)',brand:'IMEL',unit:'UNIDAD',cost:3410,baseQty:0.7,pres:'Barra 6m'},
-      {id:'EST-U153',cat:'ESTRUCTURA',name:'Canal Estructural U 2x6x0,85mm (6m)',brand:'IMEL',unit:'UNIDAD',cost:8349,baseQty:0.5,pres:'Barra 6m'},
-      {id:'EST-FLEJE',cat:'ESTRUCTURA',name:'Arriostramiento Fleje 50x0,85mm',brand:'IMEL',unit:'MT',cost:370,baseQty:30,pres:'Rollo'},
-      {id:'EST-G01',cat:'ESTRUCTURA',name:'Placa Gusset_01 Galvanizado 1mm',brand:'LASERCUT',unit:'UNIDAD',cost:2567,baseQty:2,pres:'Pieza'},
-      {id:'EST-G03',cat:'ESTRUCTURA',name:'Placa Gusset_03 ESQ Galvanizado 1mm',brand:'LASERCUT',unit:'UNIDAD',cost:3009,baseQty:7,pres:'Pieza'},
-      {id:'EST-G05',cat:'ESTRUCTURA',name:'Placa Gusset_05 ESQ Galvanizado 1mm',brand:'LASERCUT',unit:'UNIDAD',cost:3009,baseQty:1,pres:'Pieza'},
-      {id:'EST-IZQIZJ',cat:'ESTRUCTURA',name:'Placa Externa Izaje IZQ Acero Carbono 3mm',brand:'LASERCUT',unit:'UNIDAD',cost:7035,baseQty:2,pres:'fijo'},
-      {id:'EST-DERIZJ',cat:'ESTRUCTURA',name:'Placa Externa Izaje DER Acero Carbono 3mm',brand:'LASERCUT',unit:'UNIDAD',cost:7031,baseQty:2,pres:'fijo'},
-      {id:'EST-ANGTENS',cat:'ESTRUCTURA',name:'Ángulo Tensor 40x40 L=70mm',brand:'STEELFIX',unit:'UNIDAD',cost:879,baseQty:6,pres:'Pieza'},
-      {id:'EST-TLENT',cat:'ESTRUCTURA',name:'Tornillo Lenteja 8-18 x 1/2" (ensamble general)',brand:'STEELFIX',unit:'UNIDAD',cost:9.89,baseQty:1050,pres:'Unidad'},
-      {id:'EST-THEX',cat:'ESTRUCTURA',name:'Tornillo Hexagonal 10-16 x 3/4" (fijación base+cielo)',brand:'STEELFIX',unit:'UNIDAD',cost:47,baseQty:250,pres:'Unidad'},
-      {id:'EST-TAPE',cat:'ESTRUCTURA',name:'Max Tape 10x6mm (Rollo 10m)',unit:'UNIDAD',cost:11700,baseQty:0.5,pres:'Rollo 10m'},
-      {id:'EST-TLENT1',cat:'ESTRUCTURA',name:'Tornillo Lenteja 8-18 x 1" (pilares compuestos)',brand:'STEELFIX',unit:'UNIDAD',cost:15,baseQty:100,pres:'Unidad'},
-      {id:'BASE-TARIMA',cat:'BASE',name:'Tarima Base POD (placa estructural)',brand:'APPSA',unit:'MT2',cost:155000,baseQty:3.52,pres:'MT2'},
-      {id:'POD_022',cat:'PUERTAS',name:'LISTON IMPREGNADO CEPILLADO 1 1/2 X 2¨',brand:'LIFEWOOD',unit:'UNIDAD',cost:2190.0,baseQty:2.0,pres:'Unidad'},
-      {id:'POD_023',cat:'TECHO',name:'TERCIADO ESTRUCTURAL 1220 x 2440 x 9mm',brand:'CONSTRUPLAZA',unit:'UNIDAD',cost:16648.0,baseQty:1.3,pres:'Plancha 1220x2440mm'},
-      {id:'CRI1988',cat:'ELECTRICO',name:'Tubo conduit C-IV 20 mm x 6 mt',brand:'S',unit:'UNIDAD',cost:1085.71,baseQty:0.5,pres:'Tubo 6m'},
-      {id:'CRI305',cat:'ELECTRICO',name:'TUBO CONDUIT FLEXIBLE 20 mm (ROLLO 10 m)',brand:'S',unit:'MT',cost:790.0,baseQty:0.15,pres:'Rollo 10m'},
-      {id:'CEL042',cat:'ELECTRICO',name:'CAJA DISTRIBUCION TABIQUE NARANJA 16-20mm',brand:'S',unit:'UNIDAD',cost:690.0,baseQty:5.0,pres:'Unidad'},
-      {id:'CEL081',cat:'ELECTRICO',name:'SALIDA DE CAJA PVC CONDUIT 20 mm',brand:'S',unit:'UNIDAD',cost:120.0,baseQty:12.0,pres:'Unidad'},
-      {id:'POD_029',cat:'ELECTRICO',name:'PLACA CIEGA S12 BLANCO',brand:'DARTEL',unit:'UNIDAD',cost:402.0,baseQty:2.0,pres:'Unidad'},
-      {id:'POD_030',cat:'ELECTRICO',name:'PLACA INTERRUPTOR 9/12 1M SIMPLE S12 BLANCO',brand:'DARTEL',unit:'UNIDAD',cost:1006.0,baseQty:1.0,pres:'Unidad'},
-      {id:'POD_031',cat:'ELECTRICO',name:'PLACA TOMACORRIENTE 10A DOBLE S12 BLANCO',brand:'DARTEL',unit:'UNIDAD',cost:1578.0,baseQty:1.0,pres:'Unidad'},
-      {id:'POD_032',cat:'ELECTRICO',name:'Tortuga ovalada de aluminio IP-44 con rejilla blanca E-27 c/ampolleta led',unit:'UNIDAD',cost:4040.0,baseQty:1.0,pres:'Unidad'},
-      {id:'7359861',cat:'ELECTRICO',name:'Curva PVC conduit C-III 20 mm',brand:'S',unit:'UNIDAD',cost:110.0,baseQty:7.0,pres:'Unidad'},
-      {id:'POD_034',cat:'ELECTRICO',name:'Alambre de cobre aislado (H07V-U) 1,5 mm2 100 m Blanco',brand:'S',unit:'UNIDAD',cost:22530.0,baseQty:0.04,pres:'Rollo 100m'},
-      {id:'POD_035',cat:'ELECTRICO',name:'Alambre de cobre aislado (H07V-U) 1,5 mm2 100 m Rojo',brand:'S',unit:'UNIDAD',cost:22530.0,baseQty:0.12,pres:'Rollo 100m'},
-      {id:'POD_036',cat:'ELECTRICO',name:'Alambre de cobre aislado (H07V-U) 1,5 mm2 100 m Verde',brand:'S',unit:'UNIDAD',cost:22530.0,baseQty:0.04,pres:'Rollo 100m'},
-      {id:'POD_037',cat:'ELECTRICO',name:'Alambre de cobre aislado (H07V-U) 2,5 mm2 100 m Blanco',brand:'S',unit:'UNIDAD',cost:36300.0,baseQty:0.3,pres:'Rollo 100m'},
-      {id:'POD_038',cat:'ELECTRICO',name:'Alambre de cobre aislado (H07V-U) 2,5 mm2 100 m rojo',brand:'S',unit:'UNIDAD',cost:36300.0,baseQty:0.3,pres:'Rollo 100m'},
-      {id:'POD_039',cat:'ELECTRICO',name:'Alambre de cobre aislado (H07V-U) 2,5 mm2 100 m Verde',brand:'S',unit:'UNIDAD',cost:36300.0,baseQty:0.3,pres:'Rollo 100m'},
-      {id:'CRI2115',cat:'SANITARIO - AGUA POTABLE',name:'Tubo PN-16 PP RCT BETA  20 mmx3 m S.3.2',brand:'S',unit:'UNIDAD',cost:2290.0,baseQty:1.0,pres:'Tubo 3m'},
-      {id:'POD_041',cat:'SANITARIO - AGUA POTABLE',name:'Tubo PN-12,5 PP RCT BETA 20 mm x3 m  S4',brand:'S',unit:'UNIDAD',cost:2290.0,baseQty:1.0,pres:'Tubo 3m'},
-      {id:'CRI2116',cat:'SANITARIO - AGUA POTABLE',name:'Codo Transicion 90° PPR Gris 20 mm x1/2\" HE',brand:'S',unit:'UNIDAD',cost:2490.0,baseQty:2.0,pres:'Unidad'},
-      {id:'CRI2117',cat:'SANITARIO - AGUA POTABLE',name:'Codo Transicion 90° PPR Gris 20 mm x1/2\" HI',brand:'S',unit:'UNIDAD',cost:1690.0,baseQty:3.0,pres:'Unidad'},
-      {id:'CRI2118',cat:'SANITARIO - AGUA POTABLE',name:'Codo PPR 90° 20 mm. Gris',brand:'S',unit:'UNIDAD',cost:210.0,baseQty:2.0,pres:'Unidad'},
-      {id:'CRI2120',cat:'SANITARIO - AGUA POTABLE',name:'Pasatubo PPR Puente 20 mm',brand:'S',unit:'UNIDAD',cost:940.0,baseQty:1.0,pres:'Unidad'},
-      {id:'POD_046',cat:'SANITARIO - AGUA POTABLE',name:'Llave De Paso Cromada PPR 25 mm Vástago 2,3 cm',brand:'S',unit:'UNIDAD',cost:8990.0,baseQty:2.0,pres:'Unidad'},
-      {id:'POD_047',cat:'SANITARIO - AGUA POTABLE',name:'Abrazadera PPR Gris 20 mm',brand:'S',unit:'UNIDAD',cost:190.0,baseQty:10.0,pres:'Unidad'},
-      {id:'POD_048',cat:'SANITARIO - AGUA POTABLE',name:'Copla Fusión PPR 20 mm',brand:'S',unit:'UNIDAD',cost:130.0,baseQty:2.0,pres:'Unidad'},
-      {id:'CRI2121',cat:'SANITARIO - AGUA POTABLE',name:'Tubo PN-16 Gris PP RCT BETA 25 mm x3 m S.3.2',brand:'S',unit:'UNIDAD',cost:3490.0,baseQty:1.0,pres:'Tubo 3m'},
-      {id:'POD_050',cat:'SANITARIO - AGUA POTABLE',name:'Tubo PN-12,5 Gris PP RCT BETA 25 mm x3 m S4',brand:'S',unit:'UNIDAD',cost:3490.0,baseQty:1.0,pres:'Tubo 3m'},
-      {id:'POD_051',cat:'SANITARIO - AGUA POTABLE',name:'Tee  PPR 25X25X20',brand:'S',unit:'UNIDAD',cost:690.0,baseQty:2.0,pres:'Unidad'},
-      {id:'CRI2232',cat:'SANITARIO - AGUA POTABLE',name:'Tee PPR 25X20X25 mm Gris',brand:'S',unit:'UNIDAD',cost:990.0,baseQty:1.0,pres:'Unidad'},
-      {id:'POD_053',cat:'SANITARIO - AGUA POTABLE',name:'Codo PPR 90° 25 mm. Gris',brand:'HOFFENS',unit:'UNIDAD',cost:290.0,baseQty:8.0,pres:'Unidad'},
-      {id:'CRI1091',cat:'SANITARIO - AGUA POTABLE',name:'Copla Reducción PPR 25 X 20 mm',brand:'S',unit:'UNIDAD',cost:180.0,baseQty:2.0,pres:'Unidad'},
-      {id:'CRI2125',cat:'SANITARIO - AGUA POTABLE',name:'Abrazadera PPR Gris 25 mm',brand:'S',unit:'UNIDAD',cost:250.0,baseQty:6.0,pres:'Unidad'},
-      {id:'POD_056',cat:'SANITARIO - AGUA POTABLE',name:'Copla Fusión PPR 25 mm',brand:'S',unit:'UNIDAD',cost:190.0,baseQty:2.0,pres:'Unidad'},
-      {id:'CRI2126',cat:'SANITARIO - AGUA POTABLE',name:'Llave Angular Cromada 1/2\"x1/2\" He He',brand:'S',unit:'UNIDAD',cost:7090.0,baseQty:1.0,pres:'Unidad'},
-      {id:'CRI680_56',cat:'SANITARIO - INSUMO',name:'MAX TAPE 40X3mm (ROLLO 10M)',unit:'UNIDAD',cost:11700.0,baseQty:0.2,pres:'Rollo 10m'},
-      {id:'POD_059',cat:'SANITARIO - ALCANTARILLADO',name:'TTEE  110 X 110 mm Bco c/goma',brand:'HOFFENS',unit:'UNIDAD',cost:8790.0,baseQty:2.0,pres:'Unidad'},
-      {id:'POD_060',cat:'SANITARIO - ALCANTARILLADO',name:'CODO 45°  110 mm Bco c/goma',brand:'HOFFENS',unit:'UNIDAD',cost:8790.0,baseQty:1.0,pres:'Unidad'},
-      {id:'POD_061',cat:'SANITARIO - ALCANTARILLADO',name:'REDUCCION 110 X 50 mm Bco c/goma',brand:'HOFFENS',unit:'UNIDAD',cost:6490.0,baseQty:2.0,pres:'Unidad'},
-      {id:'POD_062',cat:'SANITARIO - ALCANTARILLADO',name:'REDUCCION 50 X 40 mm Bco c/goma',brand:'HOFFENS',unit:'UNIDAD',cost:1590.0,baseQty:2.0,pres:'Unidad'},
-      {id:'CRI1868',cat:'SANITARIO - ALCANTARILLADO',name:'Copla PVC-S Bco c/goma 110mm Blanco',brand:'S',unit:'UNIDAD',cost:1610.0,baseQty:1.0,pres:'Unidad'},
-      {id:'CRI2134',cat:'SANITARIO - ALCANTARILLADO',name:'Abrazadera PVC-S 110mm Gris',brand:'S',unit:'UNIDAD',cost:1690.0,baseQty:2.0,pres:'Unidad'},
-      {id:'CRI2175',cat:'SANITARIO - ALCANTARILLADO',name:'Tubo Blanco PVC Agua 50 mmx300 cm',brand:'S',unit:'UNIDAD',cost:7090.0,baseQty:0.33,pres:'Tubo 3m'},
-      {id:'POD_066',cat:'SANITARIO - ALCANTARILLADO',name:'COPLA PVC-S Bco 50mm',brand:'CONSTRUPLAZA',unit:'UNIDAD',cost:1100.0,baseQty:2.0,pres:'Unidad'},
-      {id:'CRI2134_65',cat:'SANITARIO - ALCANTARILLADO',name:'Abrazadera PVC-S 50mm Gris',brand:'S',unit:'UNIDAD',cost:720.0,baseQty:2.0,pres:'Unidad'},
-      {id:'CRI2176',cat:'SANITARIO - ALCANTARILLADO',name:'Tubo Blanco PVC Agua 40 mmx300 cm',brand:'S',unit:'UNIDAD',cost:5590.0,baseQty:0.33,pres:'Tubo 3m'},
-      {id:'CRI2171',cat:'SANITARIO - ALCANTARILLADO',name:'Codo 87,5o PVC-S Bco c/goma 40mm Blanco',brand:'S',unit:'UNIDAD',cost:590.0,baseQty:2.0,pres:'Unidad'},
-      {id:'CRI2138',cat:'SANITARIO - ALCANTARILLADO',name:'Abrazadera PVC-S 40mm Gris',brand:'S',unit:'UNIDAD',cost:742.0,baseQty:2.0,pres:'Unidad'},
-      {id:'POD_071',cat:'SANITARIO - ALCANTARILLADO',name:'Copla PVC-S Bco 40mm',brand:'HOFFENS',unit:'UNIDAD',cost:1690.0,baseQty:1.0,pres:'Unidad'},
-      {id:'POD_072',cat:'SANITARIO - ALCANTARILLADO',name:'Lubricante para tuberías 500 cc',brand:'S',unit:'UNIDAD',cost:2490.0,baseQty:0.1,pres:'Botella 500cc'},
-      {id:'POD_073',cat:'SANITARIO - ALCANTARILLADO',name:'Tornillo 12-14 x 1 1/4¨cabeza hexagonal punta broca flange galvanizado  con g...',brand:'STEELFIX',unit:'UNIDAD',cost:30.0,baseQty:2.0,pres:'Unidad'},
-      {id:'CSA148',cat:'SANITARIO',name:'Capuchón de goma 40 mm',brand:'S',unit:'UNIDAD',cost:1290.0,baseQty:1.0,pres:'Unidad'},
-      {id:'POD_075',cat:'SANITARIO - ARTEFACTOS INSUMOS',name:'Teflón para gas 1/2\" 10 m',brand:'S',unit:'UNIDAD',cost:1890.0,baseQty:0.25,pres:'Rollo 10m'},
-      {id:'POD_076',cat:'SANITARIO - ALCANTARILLADO',name:'ZOCALO SANITARIO BP-01 ACRILICO BLANCO - AISLADO',brand:'S',unit:'UNIDAD',cost:44600.0,baseQty:1.0,pres:'Unidad fabricada'},
-      {id:'POD_077',cat:'SANITARIO - INSUMO',name:'Adhesivo PVC 237 ml Tradicional Profesional',brand:'S',unit:'UNIDAD',cost:4890.0,baseQty:0.25,pres:'Pote 237ml'},
-      {id:'POD_078',cat:'ARTEFACTO BAÑO - INSUMOS',name:'Sello para tina PVC 25 mm',brand:'S',unit:'UNIDAD',cost:14990.0,baseQty:1.5,pres:'Tira'},
-      {id:'POD_079',cat:'SANITARIO - INSUMO',name:'Silicona Acética Blanca con Fungicida Rex Cartucho 300 ml',brand:'S',unit:'UNIDAD',cost:4590.0,baseQty:1.0,pres:'Cartucho 300ml'},
-      {id:'POD_080',cat:'SANITARIO - INSUMO',name:'Sellador acrílico 300 ml blanco',brand:'S',unit:'UNIDAD',cost:4590.0,baseQty:1.0,pres:'Cartucho 300ml'},
-      {id:'POD_081',cat:'PANEL MURO',name:'YESOCARTÓN ST 12,5 MM 1200X2400MM',unit:'UNIDAD',cost:6106.0,baseQty:4.0,pres:'Plancha 1200x2400',revRole:'revST125'},
-      {id:'CRI1916',cat:'PANEL MURO',name:'YESO CARTON RH 12,5mm 1200 X 2400mm',unit:'UNIDAD',cost:9134.0,baseQty:6.0,pres:'Plancha 1200x2400',revRole:'revRH125'},
-      {id:'CRI1916_81',cat:'PANEL MURO',name:'YESO CARTON RF 12,5mm 1200 X 2400mm',unit:'UNIDAD',cost:9134.0,baseQty:4.0,pres:'Plancha 1200x2400',revRole:'revRF125'},
-      {id:'CRI010',cat:'PANEL MURO',name:'YESOCARTÓN ST 10 MM 1200X2400MM',unit:'UNIDAD',cost:4176.0,baseQty:2.0,pres:'Plancha 1200x2400',revRole:'revST10'},
-      {id:'POD_085',cat:'PANEL MURO',name:'FIBRO CEMENTO LISO 6mm 1200 X 2400mm',unit:'UNIDAD',cost:9134.0,baseQty:0.5,pres:'Plancha 1200x2400',revRole:'revFibro'},
-      {id:'POD_086',cat:'PANEL MURO - INSUMO',name:'Espuma niveladora 3mm x 10m',brand:'S',unit:'UNIDAD',cost:11990.0,baseQty:0.2,pres:'Unidad'},
-      {id:'POD_087',cat:'PANEL MURO - INSUMO',name:'Tornillo B-Phillips zincado punta broca 6 - 20 x 1 5/8¨ (000-171)',brand:'STEELFIX',unit:'UNIDAD',cost:5.4,baseQty:125.0,pres:'Unidad'},
-      {id:'CRI1170',cat:'PANEL MURO - INSUMO',name:'Tornillo B-Phillips zincado punta broca 6 - 20 x 1 1/4¨ (000-168)',brand:'STEELFIX',unit:'UNIDAD',cost:5.4,baseQty:400.0,pres:'Unidad'},
-      {id:'CRI306',cat:'PANEL MURO - INSUMO',name:'JuntaPro Volcan® 10cm x 45m',brand:'S',unit:'UNIDAD',cost:4228.0,baseQty:1.0,pres:'Rollo 45m'},
-      {id:'CRI046',cat:'PANEL MURO - INSUMO',name:'Masilla base junta PRO 25 kg',brand:'S',unit:'UNIDAD',cost:20990.0,baseQty:0.5,pres:'Saco 25kg'},
-      {id:'POD_091',cat:'TERMINACION MURO - INSUMO',name:'Pasta para muro de interior 25 kg',brand:'S',unit:'UNIDAD',cost:17900.0,baseQty:0.5,pres:'Saco 25kg',termGroup:'pintura'},
-      {id:'POD_092',cat:'TERMINACION MURO - INSUMO',name:'CAVE POLFLEX - F BALDE 20 KG',brand:'CAVE',unit:'UNIDAD',cost:64600.0,baseQty:0.33,pres:'Balde 20kg'},
-      {id:'POD_093',cat:'PANEL MURO - INSUMO',name:'dymonic FC blanco',brand:'CAVE',unit:'UNIDAD',cost:3150.0,baseQty:3.0,pres:'Cartucho'},
-      {id:'POD_094',cat:'PANEL MURO - INSUMO',name:'dymonic FC gris',brand:'CAVE',unit:'UNIDAD',cost:3150.0,baseQty:1.0,pres:'Cartucho'},
-      {id:'POD_095',cat:'PANEL MURO - INSUMO',name:'Aislanglass Rollo Papel 1C R100/94 40MM',brand:'VOLCAN',unit:'UNIDAD',cost:42399.0,baseQty:1.0,pres:'Rollo'},
-      {id:'CRI2184',cat:'PANEL MURO - INSUMO',name:'VOLCAN WRAP BARRERA DE VAPOR',brand:'volcan',unit:'MT',cost:792.76,baseQty:2.0,pres:'Metro lineal'},
-      {id:'CRI2185',cat:'PANEL MURO - INSUMO',name:'VOLCAN WRAP MURO',brand:'volcan',unit:'MT',cost:1086.12,baseQty:3.0,pres:'Metro lineal'},
-      {id:'POD_098',cat:'PANEL MURO - INSUMO',name:'Cinta Construcción VolcanWrap 50,29 m',brand:'volcan',unit:'UNIDAD',cost:20090.0,baseQty:0.2,pres:'Rollo 50m'},
-      {id:'POD_099',cat:'TERMINACION MURO - INSUMO',name:'Adhesivo cerámico BECKRON BLANCO INVIERNO A.C',unit:'UNIDAD',cost:10950.0,baseQty:2.5,pres:'Saco 25kg',termGroup:'ceramica'},
-      {id:'POD_100',cat:'TERMINACION MURO - INSUMO',name:'Espaciador 2 mm con tomador',brand:'S',unit:'UNIDAD',cost:2290.0,baseQty:0.5,pres:'Unidad',termGroup:'ceramica'},
-      {id:'CTE042',cat:'TERMINACION MURO - INSUMO',name:'Fragüe piso/muro blanco 5kg BECKRON',brand:'S',unit:'UNIDAD',cost:2290.0,baseQty:2.0,pres:'Saco 5kg',termGroup:'ceramica'},
-      {id:'CRI1170_101',cat:'CIELO - INSUMO',name:'Tornillo B-Phillips zincado punta broca 6 - 20 x 1 1/4¨ (000-168)',brand:'STEELFIX',unit:'UNIDAD',cost:5.4,baseQty:100.0,pres:'Unidad'},
-      {id:'BASE-CUARZ',cat:'BASE',name:'TX-Cuarz PRO (puente adherente 2 capas)',brand:'Grupo TX',unit:'UNIDAD',cost:55000.0,baseQty:0.07,pres:'Tineta 20kg'},
-      {id:'BASE-MORTERO',cat:'BASE',name:'TX-Mortero Autonivelante con Fibra (saco 25kg)',brand:'Grupo TX',unit:'UNIDAD',cost:10140.0,baseQty:2.53,pres:'Saco 25kg'},
-      {id:'CRI1216',cat:'PANEL MURO - INSUMO',name:'ILLBRUCK FM 310 ESPUMA DE POLIURETANO',brand:'CAVE',unit:'UNIDAD',cost:3050.0,baseQty:0.5,pres:'Lata'},
-      {id:'CRI1214',cat:'TERMINACION CIELO - INSUMO',name:'ILLBRUCK PU010 ESPUMA ADHESIVA Lata 750ml',brand:'CAVE',unit:'UNIDAD',cost:6800.0,baseQty:0.5,pres:'Lata 750ml'},
-      {id:'CRI1215',cat:'TERMINACION CIELO - INSUMO',name:'ILLBRUCK AA290 LIMPIADOR MILTIUSOS',brand:'CAVE',unit:'UNIDAD',cost:1220.0,baseQty:0.25,pres:'Botella'},
-      {id:'CRI1299',cat:'TERMINACION CIELO - INSUMO',name:'ILLBRUCK Boquillas AA 210',brand:'CAVE',unit:'UNIDAD',cost:437.0,baseQty:1.0,pres:'Unidad'},
-      {id:'POD_110',cat:'INSUMOS GENERALES',name:'RODILLO DE PUAS',unit:'UNIDAD',cost:81900.0,baseQty:0.02,pres:'Unidad'},
-      {id:'POD_111',cat:'INSUMOS GENERALES',name:'Pintura en Spray Amarillo Fiesta 400ml',brand:'S',unit:'UNIDAD',cost:7000.0,baseQty:0.15,pres:'Spray 400ml'},
-      {id:'POD_112',cat:'INSUMOS GENERALES',name:'Cinta Aisladora Eléctrica Alto Desempeño 19 mm x 9 m Negra',brand:'S',unit:'UNIDAD',cost:1990.0,baseQty:0.5,pres:'Rollo 9m'},
-      {id:'POD_113',cat:'INSUMOS GENERALES',name:'Cinta Aisladora Eléctrica Alto Desempeño 19 mm x 9 m ROJO',brand:'S',unit:'UNIDAD',cost:2388.0,baseQty:0.14,pres:'Rollo 9m'},
-      {id:'POD_114',cat:'INSUMOS GENERALES',name:'Cinta Aisladora Eléctrica Alto Desempeño 19 mm x 9 m AZUL',brand:'S',unit:'UNIDAD',cost:2388.0,baseQty:0.14,pres:'Rollo 9m'},
-      {id:'POD_115',cat:'INSUMOS GENERALES',name:'Cinta Aisladora Eléctrica Alto Desempeño 19 mm x 9 m VERDE',brand:'S',unit:'UNIDAD',cost:2388.0,baseQty:0.14,pres:'Rollo 9m'},
-      {id:'POD_116',cat:'INSUMOS GENERALES',name:'Cinta Aisladora Eléctrica Alto Desempeño 19 mm x 9 m BLANCO',brand:'S',unit:'UNIDAD',cost:2388.0,baseQty:0.14,pres:'Rollo 9m'},
-      {id:'POD_117',cat:'INSUMOS GENERALES',name:'Cinta para enmascarar 48 mm 40 m',brand:'S',unit:'UNIDAD',cost:2090.0,baseQty:2.0,pres:'Rollo 40m'},
-      {id:'POD_118',cat:'EMBALAJE',name:'ROLLO FILM STRETCH NAT USO MANUAL 50*20',unit:'UNIDAD',cost:24489.0,baseQty:1.0,pres:'Rollo'},
-      {id:'POD_119',cat:'EMBALAJE',name:'Polietileno negro 4x25 m standard',unit:'UNIDAD',cost:4750.0,baseQty:0.5,pres:'Rollo 4x25m'},
-      {id:'POD_120',cat:'EMBALAJE',name:'Cinta Adhesiva para embalaje transparente 48 mm x 40 mts',brand:'S',unit:'UNIDAD',cost:1690.0,baseQty:1.0,pres:'Rollo 40m'},
-      {id:'POD_121',cat:'ARTEFACTO BAÑO',name:'Tina con Antideslizante 70x130 cm Rectangular Acero Esmaltado',brand:'FANALOZA',unit:'UNIDAD',cost:92990.0,baseQty:1.0,pres:'Unidad',slot:'tina'},
-      {id:'POD_122',cat:'ARTEFACTO BAÑO',name:'Desague Tina Plástico 1 1/2\" c/Rebalse c/Sifón HOFFENS',brand:'S',unit:'UNIDAD',cost:8190.0,baseQty:1.0,pres:'Unidad'},
-      {id:'POD_123',cat:'ARTEFACTO BAÑO',name:'Sifón PVC 1 1/4\" 66 cm',brand:'FANALOZA',unit:'UNIDAD',cost:4880.0,baseQty:1.0,pres:'Unidad'},
-      {id:'POD_124',cat:'ARTEFACTO BAÑO',name:'SOPORTE DE TINA STANDARD D25 H13',brand:'FANALOZA',unit:'UNIDAD',cost:12650.0,baseQty:1.0,pres:'Unidad'},
-      {id:'POD_125',cat:'ARTEFACTO BAÑO',name:'Celosía Ventilación 30x30cm Nova Clip Blanco',brand:'DVP',unit:'UNIDAD',cost:12650.0,baseQty:1.0,pres:'Unidad'},
-      {id:'POD_126',cat:'ARTEFACTO BAÑO',name:'LAVAMANOS NEW VERONA 5 LT BLANCO',brand:'FANALOZA',unit:'UNIDAD',cost:16200.0,baseQty:1.0,pres:'Unidad',slot:'lavamanos'},
-      {id:'POD_127',cat:'ARTEFACTO BAÑO',name:'PEDESTAL UNIVERSAL BLANCO',brand:'FANALOZA',unit:'UNIDAD',cost:12410.0,baseQty:1.0,pres:'Unidad',slot:'pedestal'},
-      {id:'POD_128',cat:'ARTEFACTO BAÑO',name:'KIT INSTALACION LAVAMANOS UNIVERSAL',brand:'FANALOZA',unit:'UNIDAD',cost:7870.0,baseQty:1.0,pres:'Kit'},
-      {id:'CSA032',cat:'ARTEFACTO BAÑO',name:'UÑETA LARGA DE ACERO PARA LAVAMANOS',brand:'S',unit:'UNIDAD',cost:1779.0,baseQty:1.0,pres:'Unidad'},
-      {id:'POD_130',cat:'ARTEFACTO BAÑO',name:'SS.\' Krone-N tanque sin mecanismo, Bath Co',brand:'CHC',unit:'UNIDAD',cost:24614.0,baseQty:1.0,pres:'Unidad',slot:'wc_tanque'},
-      {id:'POD_131',cat:'ARTEFACTO BAÑO',name:'SS.\' Krone-N taza WC salida dual sin fijacion, Bath Co.',brand:'CHC',unit:'UNIDAD',cost:24614.0,baseQty:1.0,pres:'Unidad',slot:'wc_taza'},
-      {id:'POD_132',cat:'ARTEFACTO BAÑO',name:'SS.\' Akim, Krone, Krone-N, Lofty y Magnet asiento y tapa plastica instal. su...',brand:'CHC',unit:'UNIDAD',cost:7866.0,baseQty:1.0,pres:'Unidad',slot:'wc_asiento'},
-      {id:'POD_133',cat:'ARTEFACTO BAÑO',name:'SS.\' Krone y Krone-N Inc. en tanque, mecanismo completo y fijacion al piso',brand:'CHC',unit:'UNIDAD',cost:189.0,baseQty:1.0,pres:'Kit'},
-      {id:'POD_134',cat:'ARTEFACTO BAÑO',name:'KIT INSTALACIÓN WC MURO (CON FLEX 30CM)',brand:'FANALOZA',unit:'UNIDAD',cost:5240.0,baseQty:1.0,pres:'Kit'},
-      {id:'POD_135',cat:'ARTEFACTO BAÑO',name:'MM LAVAMANOS ANDES CROMADO',brand:'FANALOZA',unit:'UNIDAD',cost:11950.0,baseQty:1.0,pres:'Unidad',slot:'grif_lav'},
-      {id:'POD_136',cat:'ARTEFACTO BAÑO',name:'MM TINA DUCHA ANDES CROMADO',brand:'FANALOZA',unit:'UNIDAD',cost:21480.0,baseQty:1.0,pres:'Unidad',slot:'grif_tina'},
-      {id:'POD_137',cat:'ARTEFACTO BAÑO',name:'Extractor Baño Reton 100 BTH',brand:'JONAS',unit:'UNIDAD',cost:49990.0,baseQty:1.0,pres:'Unidad',slot:'extractor'},
-      {id:'POD_138',cat:'TERMINACION PISO',pisoGroup:'ceramica',name:'Cerámica 30x30 cm America blanco caja 2,34 mt2',brand:'I',unit:'UNIDAD',cost:17590.0,baseQty:4.0,pres:'Caja 2,34m²'},
-      {id:'POD_139',cat:'TERMINACION MURO',name:'Esquinero cerámico 8 mm 2,5 m',brand:'S',unit:'UNIDAD',cost:9990.0,baseQty:2.0,pres:'Tira 2,5m',termGroup:'ceramica'},
-      {id:'POD_140',cat:'TERMINACION MURO',name:'Guardapolvo EPS Recto Blanco 1,3x8x220 cm',brand:'AB KÜPFER',unit:'UNIDAD',cost:3570.0,baseQty:1.0,pres:'Tira 220cm'},
-      {id:'POD_141',cat:'TERMINACION MURO',name:'Molduras poliestireno extruido LX25',brand:'S',unit:'UNIDAD',cost:2190.0,baseQty:5.0,pres:'Tira'},
-      {id:'POD_142',cat:'TERMINACION MURO',name:'LATEX SKT BLANCO (TINA 4GL)',brand:'S',unit:'UNIDAD',cost:69159.0,baseQty:0.25,pres:'Tineta 4GL',termGroup:'pintura_latex'},
-      {id:'POD_143',cat:'TERMINACION MURO',name:'ESMALTE AL AGUA EAA RL KP CONSTRUCCION SATIN BCO (TIP 5GL)',brand:'S',unit:'UNIDAD',cost:72900.0,baseQty:0.2,pres:'Tineta 5GL',termGroup:'pintura_esmalte'},
-      {id:'POD_144',cat:'PUERTAS',slot:'puerta',name:'PUERTA PRECOLGADA HOJA 700mm, PREPINTADA COLOR BLANCO, MARCO 30X90X2000 CON C...',brand:'S',unit:'UNIDAD',cost:50000.0,baseQty:1.0,pres:'Unidad precolgada'},
-      {id:'POD_145',cat:'PUERTAS',slot:'cerradura',name:'Cerradura Cilíndrica Odis 201 BAÑO - Plata',brand:'S',unit:'UNIDAD',cost:13990.0,baseQty:1.0,pres:'Unidad'},
-      {id:'POD_146',cat:'PUERTAS',name:'Tope de puerta recto Níquel satinado Särk Design',brand:'S',unit:'UNIDAD',cost:3990.0,baseQty:1.0,pres:'Unidad'},
-      {id:'CRI521',cat:'PUERTAS - INSUMO',name:'TORNILLO B-PHILLIPS ZINCADO PUNTA BROCA 8-18 x 3\"',brand:'STEELFIX',unit:'UNIDAD',cost:55.22,baseQty:55.0,pres:'Unidad'},
-      {id:'POD_148',cat:'TERMINACION BASE - INSUMO',name:'PIntura epoxica 2 compuestos 1GL',brand:'TRICOLOR',unit:'UNIDAD',cost:40072.0,baseQty:0.17,pres:'Galón'},
-      {id:'POD_149',cat:'TERMINACION BASE - INSUMO',name:'diluyente Epoxico passol 1 lt',brand:'TRICOLOR',unit:'UNIDAD',cost:3350.0,baseQty:1.0,pres:'Botella 1L'},
-      {id:'POD_150',cat:'TERMINACION BASE - INSUMO',name:'Detergente desengrasante Bd 5L DEGVAL',brand:'TRICOLOR',unit:'UNIDAD',cost:8970.0,baseQty:0.25,pres:'Bidón 5L'},
-      {id:'POD_151',cat:'INSUMOS GENERALES',name:'Tornillo B-Phillips zincado punta fina 6 - 18 x 1 1/4¨',brand:'TRICOLOR',unit:'UNIDAD',cost:50.0,baseQty:10.0,pres:'Unidad'},
-      {id:'POD_152',cat:'INSUMOS GENERALES',name:'ADHESIVO ESTRUCTURAL Y TAPAGOTERAS GRIS 280 ML (TODO EN 1)',brand:'Mr. build',unit:'UNIDAD',cost:3400.0,baseQty:0.33,pres:'Cartucho 280ml'},
-      {id:'POD_153',cat:'INSUMOS GENERALES',name:'Tarugo de nylon 5 mm 100 unidades',brand:'Mr. build',unit:'UNIDAD',cost:3400.0,baseQty:0.09,pres:'Bolsa 100un'},
-      {id:'POD_154',cat:'INSUMOS GENERALES',name:'Golilla Plana Zincada 1/4 (100 Unidades)',brand:'S',unit:'UNIDAD',cost:6890.0,baseQty:0.04,pres:'Bolsa 100un'}
-    ];
+    const demoMats = DEMO_MATS;
+    /* demoMats array extracted to constants/demoMats.js */
     const saved = localStorage.getItem('mayu_materialsDb');
     if (saved) {
       try { const parsed = JSON.parse(saved); if (parsed.length > 0) { setMats(parsed); nfy(`Biblioteca cargada: ${parsed.length} ítems.`); return; } } catch(e) {}
@@ -242,11 +91,11 @@ export default function App() {
   const addTyp=()=>{const id=`typ-${Date.now()}`;setTyps(p=>[...p,{...defTyp,id,name:`Baño Tipo ${p.length+1}`}]);setActTypId(id);nfy("Tipología creada.");};
   const updTyp=(id,f,v)=>setTyps(p=>p.map(t=>t.id===id?{...t,[f]:v}:t));
   const delTyp=(id)=>{if(typs.length<=1)return nfy("Mínimo 1 tipología.",'error');if(window.confirm("¿Eliminar?")){const n=typs.filter(t=>t.id!==id);setTyps(n);if(actTypId===id)setActTypId(n[0].id);}};
-  const updGeom=(u)=>setTyps(p=>p.map(t=>t.id===actTypId?{...t,geometry:{...t.geometry,...u}}:t));
-  const updConf=(u)=>setTyps(p=>p.map(t=>t.id===actTypId?{...t,config:{...t.config,...u}}:t));
-  const addSide=()=>setTyps(p=>p.map(t=>t.id===actTypId?{...t,geometry:{...t.geometry,polygonSides:[...(t.geometry.polygonSides||[]),{id:Date.now(),dir:'R',len:1.0}]}}:t));
-  const rmSide=(id)=>setTyps(p=>p.map(t=>t.id===actTypId?{...t,geometry:{...t.geometry,polygonSides:(t.geometry.polygonSides||[]).filter(s=>s.id!==id)}}:t));
-  const updSide=(id,f,v)=>setTyps(p=>p.map(t=>t.id===actTypId?{...t,geometry:{...t.geometry,polygonSides:(t.geometry.polygonSides||[]).map(s=>s.id===id?{...s,[f]:v}:s)}}:t));
+  const updGeom=(typId,u)=>setTyps(p=>p.map(t=>t.id===typId?{...t,geometry:{...t.geometry,...u}}:t));
+  const updConf=(typId,u)=>setTyps(p=>p.map(t=>t.id===typId?{...t,config:{...t.config,...u}}:t));
+  const addSide=(typId)=>setTyps(p=>p.map(t=>t.id===typId?{...t,geometry:{...t.geometry,polygonSides:[...(t.geometry.polygonSides||[]),{id:Date.now(),dir:'R',len:1.0}]}}:t));
+  const rmSide=(typId,sideId)=>setTyps(p=>p.map(t=>t.id===typId?{...t,geometry:{...t.geometry,polygonSides:(t.geometry.polygonSides||[]).filter(s=>s.id!==sideId)}}:t));
+  const updSide=(typId,sideId,f,v)=>setTyps(p=>p.map(t=>t.id===typId?{...t,geometry:{...t.geometry,polygonSides:(t.geometry.polygonSides||[]).map(s=>s.id===sideId?{...s,[f]:v}:s)}}:t));
   const dlTemplate=()=>{
     const a=document.createElement('a');a.href='/Plantilla_MAYU_Materiales.xlsx';a.download='Plantilla_MAYU_Materiales.xlsx';a.click();
     nfy('Plantilla descargada.');
@@ -313,6 +162,10 @@ export default function App() {
   const procTS=(f,cb)=>{if(!f)return;if(f.size>2*1024*1024){nfy("Max 2MB.",'error');return;}const r=new FileReader();r.onload=ev=>cb(f.name,ev.target.result);r.readAsDataURL(f);};
   const tsUpload=(e)=>{procTS(e.target.files[0],(n,d)=>setManItem(p=>({...p,tsN:n,tsD:d})));e.target.value=null;};
   const directTS=async(e,mid)=>{procTS(e.target.files[0],async(n,d)=>{setMats(p=>p.map(m=>m.id===mid?{...m,techSheetName:n,techSheetData:d}:m));nfy("Ficha vinculada.");});e.target.value=null;};
+  const saveMaterial=(itemData, existingId)=>{
+    if(existingId)setMats(p=>p.map(x=>x.id===existingId?{...x,...itemData}:x));else setMats(p=>[itemData,...p]);
+    nfy("Ítem guardado.");
+  };
   const saveManual=async()=>{
     if(!manItem.name||!manItem.cat)return;
     const fid=editId||(manItem.code?.trim()||`manual_${Date.now()}`);
@@ -323,12 +176,14 @@ export default function App() {
     ...((catU==='SANITARIO ARTEFACTOS'||catU==='PUERTAS'||catU==='ACCESORIOS'||catU==='ELECTRICO')&&sub?{slot:sub}:{}),
     ...(catU==='REVESTIMIENTO DE MURO'&&sub?{revRole:sub}:{}),
     };
-    if(editId)setMats(p=>p.map(x=>x.id===editId?{...x,...it}:x));else setMats(p=>[it,...p]);
-    nfy("Ítem guardado.");setManItem({code:'',cat:'',name:'',unit:'UNIDAD',cost:'',qty:'',pres:'',tsN:'',tsD:'',subline:''});setEditId(null);setShowManual(false);
+    saveMaterial(it, editId || null);
+    setManItem({code:'',cat:'',name:'',unit:'UNIDAD',cost:'',qty:'',pres:'',tsN:'',tsD:'',subline:''});setEditId(null);setShowManual(false);
   };
   const editClick=(m)=>{setEditId(m.id);setManItem({code:m.id,cat:m.cat,name:m.name,brand:m.brand||'',unit:m.unit||'UNIDAD',cost:m.cost,qty:m.baseQty,pres:m.pres||'',tsN:m.techSheetName||'',tsD:m.techSheetData||'',subline:m.termGroup||m.pisoGroup||m.slot||m.revRole||''});setShowManual(true);};
-  const confirmDel=async()=>{if(!delId)return;setMats(p=>p.filter(m=>m.id!==delId));nfy("Eliminado.");setDelId(null);};
-  const doSwap=(activeId)=>{if(!swapFrom)return;setMats(p=>p.map(m=>{if(m.id===swapFrom)return{...m,draft:false};if(m.id===activeId)return{...m,draft:true};return m;}));const nm=mats.find(m=>m.id===swapFrom)?.name||'';nfy(`"${nm}" activado. El anterior pasó a borrador.`);setSwapFrom(null);};
+  const deleteMaterial=(matId)=>{if(!matId)return;setMats(p=>p.filter(m=>m.id!==matId));nfy("Eliminado.");};
+  const confirmDel=async()=>{deleteMaterial(delId);setDelId(null);};
+  const swapMaterial=(fromId,toId)=>{setMats(p=>p.map(m=>{if(m.id===fromId)return{...m,draft:false};if(m.id===toId)return{...m,draft:true};return m;}));const nm=mats.find(m=>m.id===fromId)?.name||'';nfy(`"${nm}" activado. El anterior pasó a borrador.`);};
+  const doSwap=(activeId)=>{if(!swapFrom)return;swapMaterial(swapFrom,activeId);setSwapFrom(null);};
   const clearAll=()=>{localStorage.removeItem('mayu_materialsDb');localStorage.removeItem('mayu_proj');localStorage.removeItem('mayu_typs');setMats([]);setProj({name:'Nuevo Proyecto',client:'',clientRut:'',clientAddress:'',clientPhone:'',clientEmail:'',contactName:'',marginPct:20,contingencyPct:5});const nid=`typ-${Date.now()}`;setTyps([{...defTyp,id:nid}]);setActTypId(nid);setShowClear(false);nfy("Memoria borrada.");};
   const exportXls=async()=>{
     setBusy(true);
@@ -489,8 +344,8 @@ export default function App() {
     const c=actTyp.config;const g=actTyp.geometry;
     const GenS=({mk,yk,so,yl,ys,rl,rv,ph,children})=>(
       <div className="bg-slate-900 p-4 rounded-xl border border-slate-700 text-white space-y-3">
-        <DkSel value={c[mk]} onChange={e=>updConf({[mk]:e.target.value})} opts={so.length?so:allMo} ph={ph||'Seleccionar...'}/>
-        {c[mk]&&<>{yk&&<DkIn label={yl||'Rendimiento'} value={c[yk]} onChange={e=>updConf({[yk]:Number(e.target.value)})} sfx={ys} step="0.1"/>}<ResBadge label={rl||'Cantidad/POD'} value={rv}/>{children}</>}
+        <DkSel value={c[mk]} onChange={e=>updConf(actTypId,{[mk]:e.target.value})} opts={so.length?so:allMo} ph={ph||'Seleccionar...'}/>
+        {c[mk]&&<>{yk&&<DkIn label={yl||'Rendimiento'} value={c[yk]} onChange={e=>updConf(actTypId,{[yk]:Number(e.target.value)})} sfx={ys} step="0.1"/>}<ResBadge label={rl||'Cantidad/POD'} value={rv}/>{children}</>}
       </div>
     );
     switch(sid){
@@ -523,7 +378,7 @@ export default function App() {
         <div className="space-y-4"><div className="bg-slate-900 rounded-2xl border border-slate-700 overflow-hidden text-white">
           <div className="p-4 border-b border-slate-700/50 flex justify-between items-center"><h4 className="font-bold text-blue-400 text-sm uppercase">Instalación Eléctrica</h4><span className="text-[10px] text-amber-400 bg-amber-900/50 px-2 py-1 rounded font-bold">Fijo + Iluminación</span></div>
           <div className="p-5 space-y-4">
-            {elecIlum.length>0&&<div className="bg-slate-800/60 rounded-xl p-3 space-y-2"><label className="text-[10px] text-slate-400 uppercase font-bold">Iluminación</label><select className="w-full p-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-xs outline-none" value={c.elecIluminacion||''} onChange={e=>updConf({elecIluminacion:e.target.value})}><option value="">Sin iluminación seleccionada</option>{elecIlum.map(o=><option key={o.id} value={o.id}>{o.name} — {fmtC(o.cost)}</option>)}</select></div>}
+            {elecIlum.length>0&&<div className="bg-slate-800/60 rounded-xl p-3 space-y-2"><label className="text-[10px] text-slate-400 uppercase font-bold">Iluminación</label><select className="w-full p-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-xs outline-none" value={c.elecIluminacion||''} onChange={e=>updConf(actTypId,{elecIluminacion:e.target.value})}><option value="">Sin iluminación seleccionada</option>{elecIlum.map(o=><option key={o.id} value={o.id}>{o.name} — {fmtC(o.cost)}</option>)}</select></div>}
             <div className="bg-emerald-900/40 border border-emerald-500/30 rounded-xl p-4 flex justify-between items-center"><p className="text-xs text-emerald-300/70 uppercase font-bold">Total eléctrico por POD</p><div className="text-right"><p className="text-2xl font-black text-emerald-400">{fmtC(et)}</p><p className="text-xs text-emerald-300/60 mt-0.5">{fmtUF(et)}</p></div></div>
             {elecFijos.length>0&&<div className="bg-slate-800/50 rounded-xl overflow-hidden"><div className="p-3 border-b border-slate-700/50"><span className="text-[10px] text-slate-400 uppercase font-bold">Insumos fijos ({elecFijos.length})</span></div><div className="max-h-32 overflow-y-auto">{elecFijos.map(m=><div key={m.id} className="flex items-center justify-between px-3 py-1 border-b border-slate-700/30 text-[11px]"><span className="text-slate-300 flex-1 truncate mr-2">{m.name}</span><span className="text-white font-medium w-16 text-right shrink-0">{fmtC(m.baseQty*m.cost)}</span></div>)}</div></div>}
           </div>
@@ -545,7 +400,7 @@ export default function App() {
         const aR = EST_REF_AREA_NETA>0 ? cm.netWallArea/EST_REF_AREA_NETA : 0;
         let wCfg=[];try{wCfg=JSON.parse(c.revWallCfg||'[]');}catch(e){}
         const PLANCHA_M2=2.88;
-        const updWFace=(wi,face,field,val)=>{const nw=JSON.parse(JSON.stringify(wCfg));while(nw.length<=wi)nw.push({int:{mat:'',layers:1},ext:{mat:'',layers:1}});if(!nw[wi])nw[wi]={int:{mat:'',layers:1},ext:{mat:'',layers:1}};if(!nw[wi][face])nw[wi][face]={mat:'',layers:1};nw[wi][face]={...nw[wi][face],[field]:field==='layers'?Number(val):val};updConf({revWallCfg:JSON.stringify(nw)});};
+        const updWFace=(wi,face,field,val)=>{const nw=JSON.parse(JSON.stringify(wCfg));while(nw.length<=wi)nw.push({int:{mat:'',layers:1},ext:{mat:'',layers:1}});if(!nw[wi])nw[wi]={int:{mat:'',layers:1},ext:{mat:'',layers:1}};if(!nw[wi][face])nw[wi][face]={mat:'',layers:1};nw[wi][face]={...nw[wi][face],[field]:field==='layers'?Number(val):val};updConf(actTypId,{revWallCfg:JSON.stringify(nw)});};
         let planchaCost=0;
         wallData.forEach((w,wi)=>{const wc=wCfg[wi];if(!wc)return;let wArea=w.area;if(wi===0){const dA=(Number(actTyp.geometry.doorCount)||1)*(Number(actTyp.geometry.doorWidth)||0.75)*(Number(actTyp.geometry.doorHeight)||2.0);wArea=Math.max(0,wArea-dA);}
         ['int','ext'].forEach(face=>{const fc=wc[face];if(!fc||!fc.mat)return;const mat=revAll.find(m=>m.id===fc.mat);if(!mat)return;planchaCost+=Math.ceil(wArea/PLANCHA_M2)*(fc.layers||1)*mat.cost;});});
@@ -583,7 +438,7 @@ export default function App() {
               );})}
               <div className="bg-slate-800/60 rounded-xl p-3 space-y-2">
                 <h5 className="text-[11px] text-amber-400 font-bold uppercase">Faldón Tina</h5>
-                <select className="w-full p-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-xs outline-none" value={c.revFibro||''} onChange={e=>updConf({revFibro:e.target.value})}>
+                <select className="w-full p-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-xs outline-none" value={c.revFibro||''} onChange={e=>updConf(actTypId,{revFibro:e.target.value})}>
                   <option value="">Sin faldón</option>
                   {revAll.filter(m=>m.revRole==='revFibro').map(o=><option key={o.id} value={o.id}>{o.name} - {fmtC(o.cost)}</option>)}
                 </select>
@@ -619,11 +474,11 @@ export default function App() {
               <div className="bg-slate-800/60 rounded-xl p-3 space-y-2">
                 <h5 className="text-[11px] text-blue-400 font-bold uppercase">Yeso Cartón Cielo</h5>
                 <div className="flex items-center gap-2">
-                  <select className="flex-1 p-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-[11px] outline-none" value={c.cieloYC||''} onChange={e=>updConf({cieloYC:e.target.value})}>
+                  <select className="flex-1 p-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-[11px] outline-none" value={c.cieloYC||''} onChange={e=>updConf(actTypId,{cieloYC:e.target.value})}>
                     <option value="">Sin revestimiento</option>
                     {revPlanchas.map(o=><option key={o.id} value={o.id}>{o.name} - {fmtC(o.cost)}</option>)}
                   </select>
-                  <select className="w-16 p-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-[10px] outline-none shrink-0" value={c.cieloLayers||1} onChange={e=>updConf({cieloLayers:Number(e.target.value)})}>
+                  <select className="w-16 p-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-[10px] outline-none shrink-0" value={c.cieloLayers||1} onChange={e=>updConf(actTypId,{cieloLayers:Number(e.target.value)})}>
                     <option value={1}>x1</option>
                     <option value={2}>x2</option>
                   </select>
@@ -677,7 +532,7 @@ export default function App() {
                 <div className={`grid gap-2 ${sg.slots.length>=3?'grid-cols-3':sg.slots.length===2?'grid-cols-2':''}`}>
                   {sg.slots.map(sk=>{const sd=slotDefs.find(d=>d.key===sk);if(!sd)return null;const opts=artAll.filter(m=>m.slot===sd.slot);const sel=artAll.find(m=>m.id===c[sk]);return(
                     <div key={sk}>
-                      <select className="w-full p-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-xs outline-none" value={c[sk]||''} onChange={e=>updConf({[sk]:e.target.value})}>
+                      <select className="w-full p-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-xs outline-none" value={c[sk]||''} onChange={e=>updConf(actTypId,{[sk]:e.target.value})}>
                         <option value="">{sd.label}...</option>
                         {opts.map(o=><option key={o.id} value={o.id}>{o.name} - {fmtC(o.cost)}</option>)}
                       </select>
@@ -704,7 +559,7 @@ export default function App() {
         const tmPintInsumo = tmAll.filter(m=>m.termGroup==='pintura');
         const paintOpts = [...tmPintLatex,...tmPintEsm];
         let twCfg=[];try{twCfg=JSON.parse(c.termWallCfg||'[]');}catch(e){}
-        const updTW=(wi,field,val)=>{const nw=JSON.parse(JSON.stringify(twCfg));while(nw.length<=wi)nw.push({type:'pintura',paint:'POD_142',coats:2});nw[wi]={...nw[wi],[field]:field==='coats'?Number(val):val};updConf({termWallCfg:JSON.stringify(nw)});};
+        const updTW=(wi,field,val)=>{const nw=JSON.parse(JSON.stringify(twCfg));while(nw.length<=wi)nw.push({type:'pintura',paint:'POD_142',coats:2});nw[wi]={...nw[wi],[field]:field==='coats'?Number(val):val};updConf(actTypId,{termWallCfg:JSON.stringify(nw)});};
         const hasTina = c.artTina && mats.some(m=>m.id===c.artTina);
         const fijosCost = tmFijos.reduce((s,m)=>s+(m.baseQty*m.cost),0);
         return(
@@ -739,7 +594,7 @@ export default function App() {
               );})}
               {hasTina&&<div className="bg-slate-800/60 rounded-xl p-3 space-y-2">
                 <div className="flex items-center gap-2 mb-1"><span className="text-[11px] text-amber-400 font-bold uppercase">Faldón Tina</span></div>
-                <select className="w-full p-1.5 bg-slate-700 border border-slate-600 rounded text-white text-[11px] outline-none" value={c.termFaldon||'ceramica'} onChange={e=>updConf({termFaldon:e.target.value})}>
+                <select className="w-full p-1.5 bg-slate-700 border border-slate-600 rounded text-white text-[11px] outline-none" value={c.termFaldon||'ceramica'} onChange={e=>updConf(actTypId,{termFaldon:e.target.value})}>
                   <option value="ceramica">Cerámica</option>
                   <option value="pintura">Pintura</option>
                 </select>
@@ -774,9 +629,9 @@ export default function App() {
             </div>
             <div className="p-5 space-y-3">
               <div className="flex gap-2">
-                {pisoTypes.map(pt=><button key={pt.v} onClick={()=>updConf({pisoType:pt.v})} className={`flex-1 py-2 rounded-lg text-xs font-bold ${c.pisoType===pt.v?'bg-blue-600 text-white':'bg-slate-800 text-slate-400 border border-slate-700'}`}>{pt.l}</button>)}
+                {pisoTypes.map(pt=><button key={pt.v} onClick={()=>updConf(actTypId,{pisoType:pt.v})} className={`flex-1 py-2 rounded-lg text-xs font-bold ${c.pisoType===pt.v?'bg-blue-600 text-white':'bg-slate-800 text-slate-400 border border-slate-700'}`}>{pt.l}</button>)}
               </div>
-              <select className="w-full p-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-xs outline-none" value={c.pisoMat||''} onChange={e=>updConf({pisoMat:e.target.value})}>
+              <select className="w-full p-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-xs outline-none" value={c.pisoMat||''} onChange={e=>updConf(actTypId,{pisoMat:e.target.value})}>
                 <option value="">Seleccionar material...</option>
                 {pisoMats.filter(m=>m.pisoGroup===c.pisoType).map(o=><option key={o.id} value={o.id}>{o.name} — {fmtC(o.cost)}</option>)}
               </select>
@@ -805,12 +660,12 @@ export default function App() {
             <div className="p-5 space-y-3">
               <div className="bg-slate-800/60 rounded-xl p-3 space-y-2">
                 <label className="text-[10px] text-slate-400 uppercase font-bold">Cantidad por POD</label>
-                <input type="number" min="1" max="4" className="w-full p-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-xs outline-none" value={c.puertaQty||1} onChange={e=>updConf({puertaQty:Number(e.target.value)})}/>
+                <input type="number" min="1" max="4" className="w-full p-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-xs outline-none" value={c.puertaQty||1} onChange={e=>updConf(actTypId,{puertaQty:Number(e.target.value)})}/>
               </div>
               {prtSlots.map(ps=>{const opts=prtAll.filter(m=>m.slot===ps.slot);return(
                 <div key={ps.key} className="bg-slate-800/60 rounded-xl p-3 space-y-2">
                   <h5 className="text-[11px] text-blue-400 font-bold uppercase">{ps.label}</h5>
-                  <select className="w-full p-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-xs outline-none" value={c[ps.key]||''} onChange={e=>updConf({[ps.key]:e.target.value})}>
+                  <select className="w-full p-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-xs outline-none" value={c[ps.key]||''} onChange={e=>updConf(actTypId,{[ps.key]:e.target.value})}>
                     <option value="">Seleccionar...</option>
                     {opts.map(o=><option key={o.id} value={o.id}>{o.name} — {fmtC(o.cost)}</option>)}
                   </select>
@@ -837,7 +692,7 @@ export default function App() {
             {accSlots.map(sl=>{const opts=accAll.filter(m=>m.slot===sl.slot);return opts.length>0?(
               <div key={sl.slot} className="bg-slate-800/60 rounded-xl p-3 space-y-2">
                 <label className="text-[10px] text-slate-400 uppercase font-bold">{sl.label}</label>
-                <select className="w-full p-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-xs outline-none" value={c[sl.confKey]||''} onChange={e=>updConf({[sl.confKey]:e.target.value})}>
+                <select className="w-full p-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-xs outline-none" value={c[sl.confKey]||''} onChange={e=>updConf(actTypId,{[sl.confKey]:e.target.value})}>
                   <option value="">Sin {sl.label.toLowerCase()}</option>
                   {opts.map(o=><option key={o.id} value={o.id}>{o.name} — {fmtC(o.cost)}</option>)}
                 </select>
@@ -1042,8 +897,8 @@ const AutoStage=({title,badge,badgeColor,desc,items,total,subtitle,children})=>(
                 <div className="flex items-center gap-3 bg-white p-2 px-4 rounded-xl border shadow-sm"><label className="font-bold text-slate-500 text-sm">Diseñando:</label><select value={actTypId} onChange={e=>setActTypId(e.target.value)} className="p-1 border-0 bg-transparent text-blue-700 font-black outline-none cursor-pointer text-base">{typs.map(t=><option key={t.id} value={t.id}>{t.name} ({t.count})</option>)}</select></div>
               </div>
               <div className="flex bg-slate-200 p-1 rounded-xl w-max mb-6">
-                <button onClick={()=>updGeom({mode:'rect'})} className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${actTyp.geometry.mode==='rect'?'bg-white shadow text-blue-600':'text-slate-500'}`}><Square size={16}/> Rectangular</button>
-                <button onClick={()=>updGeom({mode:'polygon'})} className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${actTyp.geometry.mode==='polygon'?'bg-white shadow text-blue-600':'text-slate-500'}`}><Hexagon size={16}/> Polígono</button>
+                <button onClick={()=>updGeom(actTypId,{mode:'rect'})} className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${actTyp.geometry.mode==='rect'?'bg-white shadow text-blue-600':'text-slate-500'}`}><Square size={16}/> Rectangular</button>
+                <button onClick={()=>updGeom(actTypId,{mode:'polygon'})} className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${actTyp.geometry.mode==='polygon'?'bg-white shadow text-blue-600':'text-slate-500'}`}><Hexagon size={16}/> Polígono</button>
               </div>
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
                 <div className="space-y-6">
@@ -1051,22 +906,22 @@ const AutoStage=({title,badge,badgeColor,desc,items,total,subtitle,children})=>(
                     <h3 className="font-bold text-slate-800 flex items-center gap-2 mb-5"><Ruler size={20}/> Dimensiones</h3>
                     {actTyp.geometry.mode==='rect'?
                       <div className="grid grid-cols-3 gap-4 mb-4">
-                        <div><label className="block text-xs font-medium text-slate-500 mb-1">Largo (m)</label><input type="number" step="0.01" className="w-full p-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-lg font-semibold" value={actTyp.geometry.length} onChange={e=>updGeom({length:Number(e.target.value)})}/></div>
-                        <div><label className="block text-xs font-medium text-slate-500 mb-1">Ancho (m)</label><input type="number" step="0.01" className="w-full p-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-lg font-semibold" value={actTyp.geometry.width} onChange={e=>updGeom({width:Number(e.target.value)})}/></div>
-                        <div><label className="block text-xs font-medium text-slate-500 mb-1">Alto (m)</label><input type="number" step="0.01" className="w-full p-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-lg font-semibold" value={actTyp.geometry.height} onChange={e=>updGeom({height:Number(e.target.value)})}/></div>
+                        <div><label className="block text-xs font-medium text-slate-500 mb-1">Largo (m)</label><input type="number" step="0.01" className="w-full p-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-lg font-semibold" value={actTyp.geometry.length} onChange={e=>updGeom(actTypId,{length:Number(e.target.value)})}/></div>
+                        <div><label className="block text-xs font-medium text-slate-500 mb-1">Ancho (m)</label><input type="number" step="0.01" className="w-full p-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-lg font-semibold" value={actTyp.geometry.width} onChange={e=>updGeom(actTypId,{width:Number(e.target.value)})}/></div>
+                        <div><label className="block text-xs font-medium text-slate-500 mb-1">Alto (m)</label><input type="number" step="0.01" className="w-full p-2.5 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-lg font-semibold" value={actTyp.geometry.height} onChange={e=>updGeom(actTypId,{height:Number(e.target.value)})}/></div>
                       </div>
                     :<>
-                      <div className="flex justify-between items-center mb-4"><span className="text-xs font-medium text-slate-500">Alto (m)</span><input type="number" step="0.01" className="w-24 p-2 border rounded-lg outline-none text-sm font-semibold" value={actTyp.geometry.height} onChange={e=>updGeom({height:Number(e.target.value)})}/></div>
-                      <div className="bg-slate-50 border rounded-xl overflow-hidden mb-4"><table className="w-full text-sm"><thead className="bg-slate-100 text-slate-600"><tr><th className="p-2 w-10 text-center">#</th><th className="p-2">Dir</th><th className="p-2">Largo</th><th className="p-2 w-12"></th></tr></thead><tbody>{(actTyp.geometry.polygonSides||[]).map((s,i)=><tr key={s.id} className="border-t bg-white"><td className="p-2"><div className="flex items-center justify-center gap-1"><span className="w-2.5 h-2.5 rounded-full" style={{backgroundColor:STROKE_COLORS[i%STROKE_COLORS.length]}}></span><span className="text-xs text-slate-400">{i+1}</span></div></td><td className="p-2"><select className="w-full p-1.5 border rounded text-xs outline-none" value={s.dir} onChange={e=>updSide(s.id,'dir',e.target.value)}><option value="U">↑</option><option value="R">→</option><option value="D">↓</option><option value="L">←</option></select></td><td className="p-2"><input type="number" step="0.01" className="w-full p-1.5 border rounded text-xs outline-none" value={s.len} onChange={e=>updSide(s.id,'len',e.target.value)}/></td><td className="p-2 text-center"><button onClick={()=>rmSide(s.id)} className="text-red-400 hover:text-red-600"><Trash2 size={14}/></button></td></tr>)}</tbody></table></div>
-                      <button onClick={addSide} className="w-full py-2 bg-blue-50 text-blue-600 rounded-xl text-sm font-semibold flex items-center justify-center gap-2"><Plus size={16}/> Tramo</button>
+                      <div className="flex justify-between items-center mb-4"><span className="text-xs font-medium text-slate-500">Alto (m)</span><input type="number" step="0.01" className="w-24 p-2 border rounded-lg outline-none text-sm font-semibold" value={actTyp.geometry.height} onChange={e=>updGeom(actTypId,{height:Number(e.target.value)})}/></div>
+                      <div className="bg-slate-50 border rounded-xl overflow-hidden mb-4"><table className="w-full text-sm"><thead className="bg-slate-100 text-slate-600"><tr><th className="p-2 w-10 text-center">#</th><th className="p-2">Dir</th><th className="p-2">Largo</th><th className="p-2 w-12"></th></tr></thead><tbody>{(actTyp.geometry.polygonSides||[]).map((s,i)=><tr key={s.id} className="border-t bg-white"><td className="p-2"><div className="flex items-center justify-center gap-1"><span className="w-2.5 h-2.5 rounded-full" style={{backgroundColor:STROKE_COLORS[i%STROKE_COLORS.length]}}></span><span className="text-xs text-slate-400">{i+1}</span></div></td><td className="p-2"><select className="w-full p-1.5 border rounded text-xs outline-none" value={s.dir} onChange={e=>updSide(actTypId,s.id,'dir',e.target.value)}><option value="U">↑</option><option value="R">→</option><option value="D">↓</option><option value="L">←</option></select></td><td className="p-2"><input type="number" step="0.01" className="w-full p-1.5 border rounded text-xs outline-none" value={s.len} onChange={e=>updSide(actTypId,s.id,'len',e.target.value)}/></td><td className="p-2 text-center"><button onClick={()=>rmSide(actTypId,s.id)} className="text-red-400 hover:text-red-600"><Trash2 size={14}/></button></td></tr>)}</tbody></table></div>
+                      <button onClick={()=>addSide(actTypId)} className="w-full py-2 bg-blue-50 text-blue-600 rounded-xl text-sm font-semibold flex items-center justify-center gap-2"><Plus size={16}/> Tramo</button>
                     </>}
                     {/* PUERTA */}
                     <div className="mt-5 pt-5 border-t border-slate-100">
                       <h4 className="font-bold text-slate-700 flex items-center gap-2 mb-3 text-sm"><DoorOpen size={18} className="text-blue-500"/> Vano de Puerta</h4>
                       <div className="grid grid-cols-3 gap-4">
-                        <div><label className="block text-xs font-medium text-slate-500 mb-1">Ancho (m)</label><input type="number" step="0.01" className="w-full p-2 border rounded-lg outline-none text-sm font-semibold" value={actTyp.geometry.doorWidth} onChange={e=>updGeom({doorWidth:Number(e.target.value)})}/></div>
-                        <div><label className="block text-xs font-medium text-slate-500 mb-1">Alto (m)</label><input type="number" step="0.01" className="w-full p-2 border rounded-lg outline-none text-sm font-semibold" value={actTyp.geometry.doorHeight} onChange={e=>updGeom({doorHeight:Number(e.target.value)})}/></div>
-                        <div><label className="block text-xs font-medium text-slate-500 mb-1">Cantidad</label><input type="number" min="0" className="w-full p-2 border rounded-lg outline-none text-sm font-semibold" value={actTyp.geometry.doorCount} onChange={e=>updGeom({doorCount:Number(e.target.value)})}/></div>
+                        <div><label className="block text-xs font-medium text-slate-500 mb-1">Ancho (m)</label><input type="number" step="0.01" className="w-full p-2 border rounded-lg outline-none text-sm font-semibold" value={actTyp.geometry.doorWidth} onChange={e=>updGeom(actTypId,{doorWidth:Number(e.target.value)})}/></div>
+                        <div><label className="block text-xs font-medium text-slate-500 mb-1">Alto (m)</label><input type="number" step="0.01" className="w-full p-2 border rounded-lg outline-none text-sm font-semibold" value={actTyp.geometry.doorHeight} onChange={e=>updGeom(actTypId,{doorHeight:Number(e.target.value)})}/></div>
+                        <div><label className="block text-xs font-medium text-slate-500 mb-1">Cantidad</label><input type="number" min="0" className="w-full p-2 border rounded-lg outline-none text-sm font-semibold" value={actTyp.geometry.doorCount} onChange={e=>updGeom(actTypId,{doorCount:Number(e.target.value)})}/></div>
                       </div>
                       <p className="text-xs text-slate-400 mt-2">Descuento: {fmtN((actTyp.geometry.doorCount||1)*(actTyp.geometry.doorWidth||.75)*(actTyp.geometry.doorHeight||2))} m²</p>
                     </div>
