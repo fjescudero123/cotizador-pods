@@ -1,23 +1,13 @@
 // @ts-nocheck
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import {
-  Calculator, Ruler, Settings, Database, Layers, Box, LayoutDashboard, Search, Factory, X, Plus, UploadCloud, Trash2, CheckCircle2, AlertTriangle, Edit2, FileText, Download, LayoutGrid, Square, Hexagon, PanelBottom, ChevronDown, ChevronRight, Wrench, Send, Filter, Paperclip, DoorOpen, Zap, Droplets, ShowerHead, PaintBucket, Home, BarChart3, Package, Menu, CircleDollarSign, RefreshCw
-} from 'lucide-react';
-import { SUBLINES } from './constants/sublines.js';
-import { STROKE_COLORS } from './constants/colors.js';
-import { UF_VALUE, REND_ADHESIVO_M2_SACO, REND_FRAGUE_M2_SACO, REND_ESPACIADOR_M2_BOLSA, REND_ESQUINERO_ML_TIRA, REND_PASTA_M2_SACO, REND_LATEX_M2_TINETA, REND_ESMALTE_M2_TINETA, MO_COSTO_MENSUAL, MO_PODS_SEMANA, MO_SEMANAS_MES, MO_COST_POD, REND_CUARZ_M2_TINETA, REND_MORTERO_M2_SACO, EST_REF_AREA_NETA, EST_REF_KG, EST_MERMA, BASE_REF_AREA_PISO } from './constants/economics.js';
-import { STAGES } from './constants/stages.js';
+import { Calculator, Database, Layers, LayoutDashboard, LayoutGrid, Menu, X } from 'lucide-react';
+import { UF_VALUE, REND_ADHESIVO_M2_SACO, REND_FRAGUE_M2_SACO, REND_ESPACIADOR_M2_BOLSA, REND_ESQUINERO_ML_TIRA, REND_PASTA_M2_SACO, REND_LATEX_M2_TINETA, REND_ESMALTE_M2_TINETA, REND_CUARZ_M2_TINETA, REND_MORTERO_M2_SACO, EST_REF_AREA_NETA, EST_MERMA, BASE_REF_AREA_PISO } from './constants/economics.js';
 import { defGeom, defConf, defTyp } from './constants/defaults.js';
 import { classifyToStage } from './utils/classify.js';
-import { fmtC, fmtN, fmtUF } from './utils/format.js';
+import { fmtC, fmtN } from './utils/format.js';
 import { DEMO_MATS } from './constants/demoMats.js';
-import { CostChart } from './components/ui/CostChart.jsx';
 import { MAYU_LOGO_SVG } from './components/ui/MayuLogo.jsx';
 import { Notify } from './components/ui/Notify.jsx';
-import { ConfirmDlg } from './components/ui/ConfirmDlg.jsx';
-import { DkSel } from './components/ui/DkSel.jsx';
-import { DkIn } from './components/ui/DkIn.jsx';
-import { ResBadge } from './components/ui/ResBadge.jsx';
 import ProjectView from './views/ProjectView.jsx';
 import BomView from './views/BomView.jsx';
 import DashboardView from './views/DashboardView.jsx';
@@ -140,7 +130,7 @@ export default function App() {
   };
   const deleteMaterial=(matId)=>{if(!matId)return;setMats(p=>p.filter(m=>m.id!==matId));nfy("Eliminado.");};
   const swapMaterial=(fromId,toId)=>{setMats(p=>p.map(m=>{if(m.id===fromId)return{...m,draft:false};if(m.id===toId)return{...m,draft:true};return m;}));const nm=mats.find(m=>m.id===fromId)?.name||'';nfy(`"${nm}" activado. El anterior pasó a borrador.`);};
-  const clearAll=()=>{localStorage.removeItem('mayu_materialsDb');localStorage.removeItem('mayu_proj');localStorage.removeItem('mayu_typs');setMats([]);setProj({name:'Nuevo Proyecto',client:'',clientRut:'',clientAddress:'',clientPhone:'',clientEmail:'',contactName:'',marginPct:20,contingencyPct:5});const nid=`typ-${Date.now()}`;setTyps([{...defTyp,id:nid}]);setActTypId(nid);setShowClear(false);nfy("Memoria borrada.");};
+  const clearAll=()=>{localStorage.removeItem('mayu_materialsDb');localStorage.removeItem('mayu_proj');localStorage.removeItem('mayu_typs');setMats([]);setProj({name:'Nuevo Proyecto',client:'',clientRut:'',clientAddress:'',clientPhone:'',clientEmail:'',contactName:'',marginPct:20,contingencyPct:5});const nid=`typ-${Date.now()}`;setTyps([{...defTyp,id:nid}]);setActTypId(nid);nfy("Memoria borrada.");};
   const exportXls=async()=>{
     setBusy(true);
     try{
@@ -270,12 +260,12 @@ export default function App() {
     return{typMetrics:tm,totalPods:totP,bom,bomByCategory:byCat,costsByCategory:costsCat,totals:{material:totM,materialTheoretical:totMTheo,labor:totL,directCost:dc,contingency:cg,costWithContingency:cwc,grossMargin:spt-cwc,salePricePerPod:spp,salePriceTotal:spt}};
   },[typs,proj.contingencyPct,proj.marginPct,mats]);
   const ctx = useMemo(() => ({
-    data: { mats, typs, proj, calc, actTyp, actTypId, crmProjects, crmLoading },
+    data: { mats, typs, proj, calc, actTyp, actTypId, crmProjects },
     nav: { tab, setTab, expStage, setExpStage, selCat, setSelCat },
     setters: { setMats, setTyps, setProj, setActTypId },
     business: { addTyp, updTyp, delTyp, updGeom, updConf, addSide, rmSide, updSide, uploadFile, directTS, saveMaterial, deleteMaterial, swapMaterial, clearAll, exportXls, dlTemplate, loadCRMProject, procTS },
     io: { nfy, busy, setBusy },
-  }), [mats, typs, proj, calc, actTyp, actTypId, crmProjects, crmLoading, tab, expStage, selCat, busy]);
+  }), [mats, typs, proj, calc, actTyp, actTypId, crmProjects, tab, expStage, selCat, busy]);
   const navTabs=[{id:'project',icon:<Layers size={18}/>,l:'Proyecto'},{id:'design',icon:<LayoutGrid size={18}/>,l:'Diseño'},{id:'bom',icon:<Calculator size={18}/>,l:'BOM'},{id:'dashboard',icon:<LayoutDashboard size={18}/>,l:'Dashboard'},{id:'database',icon:<Database size={18}/>,l:'Data'}];
   return(
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-800">
