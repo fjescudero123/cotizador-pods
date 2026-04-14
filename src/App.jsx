@@ -3,148 +3,21 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Calculator, Ruler, Settings, Database, Layers, Box, LayoutDashboard, Search, Factory, X, Plus, UploadCloud, Trash2, CheckCircle2, AlertTriangle, Edit2, FileText, Download, LayoutGrid, Square, Hexagon, PanelBottom, ChevronDown, ChevronRight, Wrench, Send, Filter, Paperclip, DoorOpen, Zap, Droplets, ShowerHead, PaintBucket, Home, BarChart3, Package, Menu, CircleDollarSign, RefreshCw
 } from 'lucide-react';
+import { SUBLINES } from './constants/sublines.js';
+import { STROKE_COLORS } from './constants/colors.js';
+import { UF_VALUE, REND_ADHESIVO_M2_SACO, REND_FRAGUE_M2_SACO, REND_ESPACIADOR_M2_BOLSA, REND_ESQUINERO_ML_TIRA, REND_PASTA_M2_SACO, REND_LATEX_M2_TINETA, REND_ESMALTE_M2_TINETA, MO_COSTO_MENSUAL, MO_PODS_SEMANA, MO_SEMANAS_MES, MO_COST_POD, REND_CUARZ_M2_TINETA, REND_MORTERO_M2_SACO, EST_REF_AREA_NETA, EST_REF_KG, EST_MERMA, BASE_REF_AREA_PISO } from './constants/economics.js';
+import { STAGES } from './constants/stages.js';
+import { defGeom, defConf, defTyp } from './constants/defaults.js';
+import { classifyToStage } from './utils/classify.js';
+import { fmtC, fmtN, fmtUF } from './utils/format.js';
+import { CostChart } from './components/ui/CostChart.jsx';
+import { MAYU_LOGO_SVG } from './components/ui/MayuLogo.jsx';
+import { Notify } from './components/ui/Notify.jsx';
+import { ConfirmDlg } from './components/ui/ConfirmDlg.jsx';
+import { DkSel } from './components/ui/DkSel.jsx';
+import { DkIn } from './components/ui/DkIn.jsx';
+import { ResBadge } from './components/ui/ResBadge.jsx';
 const useCRMProjects = () => { const [crmProjects] = useState([]); const [crmLoading] = useState(false); return { crmProjects, crmLoading }; };
-const SUBLINES = {
-  'TERMINACION DE MURO':[{v:'',l:'Insumo fijo (siempre)'},{v:'ceramica',l:'Cerámica'},{v:'pintura',l:'Pintura — pasta muro'},{v:'pintura_latex',l:'Pintura — látex'},{v:'pintura_esmalte',l:'Pintura — esmalte'}],
-  'PISO':[{v:'',l:'Insumo fijo'},{v:'ceramica',l:'Cerámica'},{v:'vinilico',l:'Vinílico'},{v:'porcelanato',l:'Porcelanato'}],
-  'SANITARIO ARTEFACTOS':[{v:'',l:'Insumo fijo (siempre)'},{v:'tina',l:'Tina / Receptáculo'},{v:'wc_tanque',l:'WC Tanque'},{v:'wc_taza',l:'WC Taza'},{v:'wc_asiento',l:'WC Asiento'},{v:'lavamanos',l:'Lavamanos'},{v:'pedestal',l:'Pedestal / Mueble'},{v:'grif_lav',l:'Grifería Lavamanos'},{v:'grif_tina',l:'Grifería Tina/Ducha'},{v:'extractor',l:'Extractor'},{v:'mampara_barra',l:'Mampara / Barra'}],
-  'REVESTIMIENTO DE MURO':[{v:'',l:'Insumo fijo (siempre)'},{v:'revRH125',l:'Plancha — Zona húmeda (RH)'},{v:'revRF125',l:'Plancha — Protección fuego (RF)'},{v:'revST125',l:'Plancha — Zona seca (ST 12.5)'},{v:'revST10',l:'Plancha — Shaft (ST 10)'},{v:'revFibro',l:'Plancha — Faldón tina (fibrocemento)'}],
-  'PUERTAS':[{v:'',l:'Insumo fijo (siempre)'},{v:'puerta',l:'Puerta (seleccionable)'},{v:'cerradura',l:'Cerradura (seleccionable)'}],
-  'ELECTRICO':[{v:'',l:'Insumo fijo (siempre)'},{v:'iluminacion',l:'Iluminación'}],
-  'ACCESORIOS':[{v:'',l:'Insumo fijo (siempre)'},{v:'percha',l:'Percha'},{v:'portarollo',l:'Portarollo'},{v:'toallero',l:'Toallero'}],
-};
-const CostChart = ({data,fmt,onBarClick}) => {
-  const max = Math.max(...data.map(d=>d.v),1);
-  return(<div className="space-y-2">{data.map((d,i)=>(<div key={i} className={`flex items-center gap-3 ${onBarClick?'cursor-pointer hover:bg-slate-50 rounded-lg p-1 -m-1':''}`} onClick={()=>onBarClick&&onBarClick(d.l)}><span className="text-xs text-slate-600 w-32 truncate text-right">{d.l}</span><div className="flex-1 bg-slate-100 rounded-full h-5 overflow-hidden"><div className="h-full rounded-full" style={{width:`${(d.v/max)*100}%`,backgroundColor:i%2?'#929965':'#7A8C8A'}}></div></div><span className="text-xs font-bold text-slate-700 w-24 text-right">{fmt(d.v)}</span></div>))}</div>);
-};
-const MAYU_LOGO_SVG = ({s=40})=>(<svg viewBox="0 0 190 100" width={s} height={s*100/190} fill="none"><polygon points="10,80 60,80 60,30" fill="#E3B864"/><rect x="63" y="30" width="4" height="50" fill="#E3B864"/><polygon points="71,80 71,30 95,10 95,80" fill="#7A8C8A"/><polygon points="99,80 99,10 123,30 123,80" fill="#E3E5E0"/><polygon points="127,80 127,30 180,80" fill="#929965"/><text x="95" y="98" textAnchor="middle" fontWeight="900" fontSize="18" letterSpacing="3" fill="#2c2c2a">MAYU</text></svg>);
-const STROKE_COLORS = ['#ef4444','#f97316','#eab308','#22c55e','#0ea5e9','#6366f1','#a855f7','#ec4899','#14b8a6','#84cc16'];
-const UF_VALUE = 39841.72;
-const REND_ADHESIVO_M2_SACO = 3.83;   // Bekron A·C: 1.6kg/m²×4mm=6.4kg/m² → saco 24.5kg/6.4
-const REND_FRAGUE_M2_SACO = 11.1;     // Bekron Fragüe: 0.45kg/m² → saco 5kg/0.45
-const REND_ESPACIADOR_M2_BOLSA = 5;   // ~1 bolsa cada 5m²
-const REND_ESQUINERO_ML_TIRA = 2.5;   // Tira 2.5m
-const REND_PASTA_M2_SACO = 25;        // 1kg/m² → saco 25kg
-const REND_LATEX_M2_TINETA = 100;     // Conservador sobre YC nuevo (ficha: 130, terreno ~100)
-const REND_ESMALTE_M2_TINETA = 105;
-const MO_COSTO_MENSUAL = 14840000;  // Costo empresa equipo operarios/mes
-const MO_PODS_SEMANA = 10;           // Capacidad producción semanal
-const MO_SEMANAS_MES = 52/12;        // 4.333 semanas/mes
-const MO_COST_POD = Math.round(MO_COSTO_MENSUAL / (MO_PODS_SEMANA * MO_SEMANAS_MES)); // $342.644/POD   // Conservador sobre YC nuevo (ficha: 135, terreno ~105)
-const REND_CUARZ_M2_TINETA = 23.5;  // FT TX-Cuarz PRO: consumo 425g/m²/capa × 2 capas = 0.85kg/m² → tineta 20kg / 0.85
-const REND_MORTERO_M2_SACO = 1.55;  // FT Mortero Autoniv.: rend. saco ~15.5L, espesor 10mm → 15.5L / 10L/m² = 1.55 m²/saco
-const EST_REF_AREA_NETA = 16.74;
-const EST_REF_KG = 104.6;
-const EST_MERMA = 0.05;
-const BASE_REF_AREA_PISO = 3.52;
-const STAGES = [
-      {id:'base',label:'1. Base',cat:'BASE',icon:Home},
-      {id:'estructura',label:'2. Estructura',cat:'ESTRUCTURA',icon:Box},
-      {id:'techo',label:'3. Techo',cat:'TECHO',icon:PanelBottom},
-      {id:'electrico',label:'4. Eléctrico',cat:'ELECTRICO',icon:Zap},
-      {id:'sanitario_ap',label:'5. Sanitario AP',cat:'SANITARIO AGUA POTABLE',icon:Droplets},
-      {id:'sanitario_al',label:'6. Sanitario ALC',cat:'SANITARIO ALCANTARILLADO',icon:Droplets},
-      {id:'revestimiento_muro',label:'7. Rev. Muro',cat:'REVESTIMIENTO DE MURO',icon:PaintBucket},
-      {id:'cielo',label:'8. Cielo',cat:'CIELO',icon:Layers},
-      {id:'sanitarios_artefactos',label:'9. Artefactos',cat:'SANITARIO ARTEFACTOS',icon:ShowerHead},
-      {id:'terminacion_muro',label:'10. Term. Muro',cat:'TERMINACION DE MURO',icon:PaintBucket},
-      {id:'piso',label:'12. Piso',cat:'PISO',icon:LayoutGrid},
-      {id:'puertas',label:'13. Puertas',cat:'PUERTAS',icon:DoorOpen},
-      {id:'accesorios',label:'14. Accesorios',cat:'ACCESORIOS',icon:Wrench},
-      {id:'insumos',label:'15. Insumos',cat:'INSUMOS GENERALES',icon:Package}
-];
-const classifyToStage = (rawCat) => {
-  const c = (rawCat||'').toUpperCase().trim();
-  if (c.includes('TERMINACION BASE')) return 'BASE';
-  if (c.includes('TERMINACION CIELO')) return 'CIELO';
-  if (c.includes('TERMINACION PISO')) return 'PISO';
-  if (c.includes('TERMINACION MURO')) return 'TERMINACION DE MURO';
-  if (c.includes('ESTRUCTURA')) return 'ESTRUCTURA';
-  if (c.includes('TECHO') || c.includes('CUBIERTA')) return 'TECHO';
-  if (c.includes('ELECTRICO')) return 'ELECTRICO';
-  if (c.includes('AGUA POTABLE')) return 'SANITARIO AGUA POTABLE';
-  if (c.includes('ALCANTARILLADO')) return 'SANITARIO ALCANTARILLADO';
-  if (c.includes('ARTEFACTO') || c.includes('ARTEFACTOS INSUMOS')) return 'SANITARIO ARTEFACTOS';
-  if (c.includes('SANITARIO')) return 'SANITARIO ALCANTARILLADO';
-  if (c.includes('PANEL MURO')) return 'REVESTIMIENTO DE MURO';
-  if (c.includes('REVESTIMIENTO')) return 'REVESTIMIENTO DE MURO';
-  if (c.includes('CIELO')) return 'CIELO';
-  if (c.includes('PINTURA') || c.includes('LATEX') || c.includes('ESMALTE')) return 'PINTURA';
-  if (c.includes('PISO') || c.includes('CERAMICA') || c.includes('PORCELANATO')) return 'PISO';
-  if (c.includes('PUERTA')) return 'PUERTAS';
-  if (c.includes('ACCESORIO')) return 'ACCESORIOS';
-  if (c.includes('BASE') || c.includes('TARIMA')) return 'BASE';
-  if (c.includes('EMBALAJE')) return 'INSUMOS GENERALES';
-  if (c.includes('INSUMOS')) return 'INSUMOS GENERALES';
-  return 'INSUMOS GENERALES';
-};
-const defGeom = {
-  mode:'rect', length:2.20, width:1.60, height:2.40,
-  doorWidth:0.75, doorHeight:2.00, doorCount:1,
-  polygonSides:[{id:1,dir:'R',len:2.20},{id:2,dir:'D',len:1.60},{id:3,dir:'L',len:2.20},{id:4,dir:'U',len:1.60}]
-};
-const defConf = {
-  cieloYC:'CRI1916', cieloLayers:1,
-  termWallCfg:'[{"type": "pintura", "paint": "POD_142", "coats": 2}, {"type": "ceramica"}, {"type": "pintura", "paint": "POD_143", "coats": 2}, {"type": "pintura", "paint": "POD_142", "coats": 2}]',
-  termFaldon:'ceramica',
-  pisoType:'ceramica',pisoMat:'POD_138',
-  revFibro:'POD_085',
-  revWallCfg:'[{"int": {"mat": "CRI1916", "layers": 1}, "ext": {"mat": "POD_081", "layers": 1}}, {"int": {"mat": "CRI1916_81", "layers": 2}, "ext": {"mat": "CRI1916_81", "layers": 1}}, {"int": {"mat": "CRI1916", "layers": 1}, "ext": {"mat": "POD_081", "layers": 1}}, {"int": {"mat": "POD_081", "layers": 1}, "ext": {"mat": "CRI010", "layers": 1}}]',
-  artTina:'POD_121', artWCTanque:'POD_130', artWCTaza:'POD_131', artWCAsiento:'POD_132',
-  artLavamanos:'POD_126', artPedestal:'POD_127', artGrifLav:'POD_135', artGrifTina:'POD_136', artExtractor:'POD_137', artMampara:'',
-  elecIluminacion:'',
-  accPercha:'', accPortarollo:'', accToallero:'',
-  puertaMat:'POD_144', cerraduraMat:'POD_145', puertaQty:1,
-  laborCostPerPod:MO_COST_POD,
-};
-const defTyp = {id:`typ-${Date.now()}`,name:'Baño Tipo 1',count:1,geometry:defGeom,config:defConf};
-const Notify = ({n,onClose}) => {
-  if(!n) return null;
-  const e = n.type==='error';
-  return (
-    <div className={`fixed bottom-5 right-5 p-4 rounded-2xl shadow-2xl flex items-center gap-3 z-[100] border backdrop-blur-md max-w-sm ${e?'bg-red-50/95 text-red-800 border-red-200':'bg-emerald-50/95 text-emerald-800 border-emerald-200'}`} style={{animation:'slideUp .3s ease'}}>
-      {e?<AlertTriangle size={20}/>:<CheckCircle2 size={20}/>}
-      <p className="font-medium text-sm flex-1">{n.message}</p>
-      <button onClick={onClose} className="opacity-60 hover:opacity-100"><X size={16}/></button>
-    </div>
-  );
-};
-const ConfirmDlg = ({title,msg,onOk,onNo,danger}) => (
-  <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
-    <div className="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-sm" style={{animation:'scaleIn .2s ease'}}>
-      <div className={`flex items-center gap-3 mb-3 ${danger?'text-red-600':'text-amber-600'}`}><AlertTriangle size={24}/><h3 className="text-xl font-bold">{title}</h3></div>
-      <p className="text-slate-600 mb-6 text-sm">{msg}</p>
-      <div className="flex justify-end gap-3">
-        <button onClick={onNo} className="px-4 py-2.5 text-slate-600 font-medium hover:bg-slate-100 rounded-xl">Cancelar</button>
-        <button onClick={onOk} className={`px-4 py-2.5 text-white font-medium rounded-xl shadow-sm ${danger?'bg-red-600 hover:bg-red-700':'bg-amber-600 hover:bg-amber-700'}`}>Confirmar</button>
-      </div>
-    </div>
-  </div>
-);
-const DkSel = ({label,value,onChange,opts,ph}) => (
-  <div>
-    {label&&<label className="block text-[10px] font-bold text-slate-400 uppercase mb-2">{label}</label>}
-    <select className="w-full p-2.5 rounded-xl border-0 bg-slate-800 text-white focus:ring-2 focus:ring-blue-400 outline-none text-sm" value={value} onChange={onChange}>
-      <option value="">{ph||'Seleccionar...'}</option>
-      {opts.map(o=><option key={o.v} value={o.v}>{o.l}</option>)}
-    </select>
-  </div>
-);
-const DkIn = ({label,value,onChange,step,sfx}) => (
-  <div className="bg-slate-800 p-3 rounded-xl border border-slate-700">
-    <label className="block text-[10px] text-slate-400 uppercase font-bold">{label}</label>
-    <div className="flex items-center gap-2 mt-1">
-      <input type="number" step={step||"1"} className="w-full bg-transparent text-white font-bold outline-none" value={value} onChange={onChange}/>
-      {sfx&&<span className="text-xs text-slate-500 shrink-0">{sfx}</span>}
-    </div>
-  </div>
-);
-const ResBadge = ({label,value}) => (
-  <div className="bg-slate-800 p-3 rounded-xl border border-emerald-500/30 flex justify-between items-center">
-    <span className="text-xs text-slate-400">{label}</span>
-    <span className="font-bold text-emerald-400">{value}</span>
-  </div>
-);
 
 export default function App() {
   const [tab,setTab] = useState('project');
@@ -591,9 +464,6 @@ export default function App() {
     else s=(actTyp.geometry.polygonSides||[]).map((x,i)=>({l:`M${i+1}`,len:Number(x.len)||0,c:STROKE_COLORS[i%STROKE_COLORS.length]}));
     return s.map(x=>({...x,area:x.len*(Number(actTyp.geometry.height)||0)}));
   },[actTyp.geometry]);
-  const fmtC=(v)=>new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0}).format(v||0);
-  const fmtN=(v)=>new Intl.NumberFormat('es-CL',{maximumFractionDigits:2}).format(v||0);
-  const fmtUF=(v)=>new Intl.NumberFormat('es-CL',{minimumFractionDigits:2,maximumFractionDigits:2}).format((v||0)/UF_VALUE)+' UF';
   const cm=calc.typMetrics[actTypId]||{floorArea:0,perimeter:0,netWallArea:0,ceilingArea:0,effectiveFloorArea:0,piecesPerPod:0,totalBoxesTypology:0,isClosed:false};
   const mo=(fn)=>mats.filter(fn).map(m=>({v:m.id,l:`${m.name} - ${fmtC(m.cost)}/${m.unit}`}));
   const allMo=mats.map(m=>({v:m.id,l:`${m.name} - ${fmtC(m.cost)}/${m.unit}`}));

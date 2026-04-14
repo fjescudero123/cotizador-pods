@@ -1,0 +1,25 @@
+export const classifyToStage = (rawCat) => {
+  const c = (rawCat||'').toUpperCase().trim();
+  if (c.includes('TERMINACION BASE')) return 'BASE';
+  if (c.includes('TERMINACION CIELO')) return 'CIELO';
+  if (c.includes('TERMINACION PISO')) return 'PISO';
+  if (c.includes('TERMINACION MURO')) return 'TERMINACION DE MURO';
+  if (c.includes('ESTRUCTURA')) return 'ESTRUCTURA';
+  if (c.includes('TECHO') || c.includes('CUBIERTA')) return 'TECHO';
+  if (c.includes('ELECTRICO')) return 'ELECTRICO';
+  if (c.includes('AGUA POTABLE')) return 'SANITARIO AGUA POTABLE';
+  if (c.includes('ALCANTARILLADO')) return 'SANITARIO ALCANTARILLADO';
+  if (c.includes('ARTEFACTO') || c.includes('ARTEFACTOS INSUMOS')) return 'SANITARIO ARTEFACTOS';
+  if (c.includes('SANITARIO')) return 'SANITARIO ALCANTARILLADO';
+  if (c.includes('PANEL MURO')) return 'REVESTIMIENTO DE MURO';
+  if (c.includes('REVESTIMIENTO')) return 'REVESTIMIENTO DE MURO';
+  if (c.includes('CIELO')) return 'CIELO';
+  if (c.includes('PINTURA') || c.includes('LATEX') || c.includes('ESMALTE')) return 'PINTURA';
+  if (c.includes('PISO') || c.includes('CERAMICA') || c.includes('PORCELANATO')) return 'PISO';
+  if (c.includes('PUERTA')) return 'PUERTAS';
+  if (c.includes('ACCESORIO')) return 'ACCESORIOS';
+  if (c.includes('BASE') || c.includes('TARIMA')) return 'BASE';
+  if (c.includes('EMBALAJE')) return 'INSUMOS GENERALES';
+  if (c.includes('INSUMOS')) return 'INSUMOS GENERALES';
+  return 'INSUMOS GENERALES';
+};
