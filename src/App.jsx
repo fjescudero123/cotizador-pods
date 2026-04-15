@@ -21,7 +21,7 @@ export default function App() {
   const [selCat,setSelCat] = useState(null);
   const [busy,setBusy] = useState(false);
   const [expStage,setExpStage] = useState('estructura');
-  const [notif, nfy] = useNotification(4000);
+  const [notif, nfy, dismissNotif] = useNotification(4000);
   const [mobMenu,setMobMenu] = useState(false);
   const [mats,setMats] = useState([]);
   const [proj,setProj] = useState(()=>{try{const s=localStorage.getItem('mayu_proj');return s?JSON.parse(s):{name:'Cotización B2B',client:'',clientRut:'',clientAddress:'',clientPhone:'',clientEmail:'',contactName:'',marginPct:20,contingencyPct:5};}catch(e){return{name:'Cotización B2B',client:'',clientRut:'',clientAddress:'',clientPhone:'',clientEmail:'',contactName:'',marginPct:20,contingencyPct:5};}});
@@ -269,7 +269,7 @@ export default function App() {
   return(
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-800">
       <style>{`@keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}@keyframes scaleIn{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}.cscr::-webkit-scrollbar{height:6px}.cscr::-webkit-scrollbar-track{background:#f1f5f9;border-radius:3px}.cscr::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px}`}</style>
-      <Notify n={notif} onClose={()=>nfy(null)}/>
+      <Notify n={notif} onClose={dismissNotif}/>
       {/* HEADER */}
       <header className="bg-white border-b border-slate-200 px-4 py-2 shadow-sm flex justify-between items-center z-20 shrink-0">
         <div className="flex items-center gap-3">
