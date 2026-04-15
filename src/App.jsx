@@ -1,5 +1,5 @@
 // @ts-nocheck
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Calculator, Database, Layers, LayoutDashboard, LayoutGrid, Menu, X } from 'lucide-react';
 import { UF_VALUE, REND_ADHESIVO_M2_SACO, REND_FRAGUE_M2_SACO, REND_ESPACIADOR_M2_BOLSA, REND_ESQUINERO_ML_TIRA, REND_PASTA_M2_SACO, REND_LATEX_M2_TINETA, REND_ESMALTE_M2_TINETA, REND_CUARZ_M2_TINETA, REND_MORTERO_M2_SACO, EST_REF_AREA_NETA, EST_MERMA, BASE_REF_AREA_PISO } from './constants/economics.js';
 import { defGeom, defConf, defTyp } from './constants/defaults.js';
@@ -8,6 +8,7 @@ import { fmtC, fmtN } from './utils/format.js';
 import { DEMO_MATS } from './constants/demoMats.js';
 import { MAYU_LOGO_SVG } from './components/ui/MayuLogo.jsx';
 import { Notify } from './components/ui/Notify.jsx';
+import { useNotification } from './hooks/useNotification.js';
 import ProjectView from './views/ProjectView.jsx';
 import BomView from './views/BomView.jsx';
 import DashboardView from './views/DashboardView.jsx';
@@ -20,7 +21,7 @@ export default function App() {
   const [selCat,setSelCat] = useState(null);
   const [busy,setBusy] = useState(false);
   const [expStage,setExpStage] = useState('estructura');
-  const [notif,setNotif] = useState(null);
+  const [notif, nfy] = useNotification(4000);
   const [mobMenu,setMobMenu] = useState(false);
   const [mats,setMats] = useState([]);
   const [proj,setProj] = useState(()=>{try{const s=localStorage.getItem('mayu_proj');return s?JSON.parse(s):{name:'Cotización B2B',client:'',clientRut:'',clientAddress:'',clientPhone:'',clientEmail:'',contactName:'',marginPct:20,contingencyPct:5};}catch(e){return{name:'Cotización B2B',client:'',clientRut:'',clientAddress:'',clientPhone:'',clientEmail:'',contactName:'',marginPct:20,contingencyPct:5};}});
@@ -28,7 +29,6 @@ export default function App() {
   const [actTypId,setActTypId] = useState(typs[0]?.id);
   const { crmProjects, crmLoading } = useCRMProjects();
   const actTyp = useMemo(()=>typs.find(t=>t.id===actTypId)||typs[0]||defTyp,[typs,actTypId]);
-  const nfy = useCallback((m,t='success')=>setNotif({message:m,type:t}),[]);
   useEffect(()=>{
     const demoMats = DEMO_MATS;
     /* demoMats array extracted to constants/demoMats.js */
@@ -42,7 +42,6 @@ export default function App() {
   useEffect(()=>{if(mats.length>0)localStorage.setItem('mayu_materialsDb',JSON.stringify(mats));},[mats]);
   useEffect(()=>{localStorage.setItem('mayu_proj',JSON.stringify(proj));},[proj]);
   useEffect(()=>{localStorage.setItem('mayu_typs',JSON.stringify(typs));},[typs]);
-  useEffect(()=>{if(notif){const t=setTimeout(()=>setNotif(null),4000);return()=>clearTimeout(t);}},[notif]);
   const loadCRMProject = (crm) => {
     setProj(p => ({...p, name: crm.nombre || p.name, client: crm.cliente || p.client, contactName: crm.responsable_comercial || '', clientAddress: crm.ubicacion || ''}));
     if (crm.cantidad_unidades > 1) {
@@ -270,7 +269,7 @@ export default function App() {
   return(
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-800">
       <style>{`@keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}@keyframes scaleIn{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}.cscr::-webkit-scrollbar{height:6px}.cscr::-webkit-scrollbar-track{background:#f1f5f9;border-radius:3px}.cscr::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px}`}</style>
-      <Notify n={notif} onClose={()=>setNotif(null)}/>
+      <Notify n={notif} onClose={()=>nfy(null)}/>
       {/* HEADER */}
       <header className="bg-white border-b border-slate-200 px-4 py-2 shadow-sm flex justify-between items-center z-20 shrink-0">
         <div className="flex items-center gap-3">
