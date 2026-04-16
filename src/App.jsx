@@ -9,6 +9,8 @@ import { DEMO_MATS } from './constants/demoMats.js';
 import { MAYU_LOGO_SVG } from './components/ui/MayuLogo.jsx';
 import { Notify } from './components/ui/Notify.jsx';
 import { useNotification } from '@mayu/hooks';
+import { db, ensureAuth } from './firebase.js';
+import { doc, getDoc, deleteDoc } from 'firebase/firestore';
 import ProjectView from './views/ProjectView.jsx';
 import BomView from './views/BomView.jsx';
 import DashboardView from './views/DashboardView.jsx';
@@ -16,7 +18,38 @@ import DatabaseView from './views/DatabaseView.jsx';
 import DesignView from './views/DesignView.jsx';
 const useCRMProjects = () => { const [crmProjects] = useState([]); const [crmLoading] = useState(false); return { crmProjects, crmLoading }; };
 
+const HUB_URL = window.location.hostname === 'localhost' ? 'http://localhost:5178/' : 'https://mayu-hub.netlify.app/';
+
 export default function App() {
+  // ─── Auth gate (Cotizador no tenia login — ahora requiere sesion via hub) ──
+  const [authUser, setAuthUser] = useState(() => {
+    try { const s = localStorage.getItem('mayu_session'); return s ? JSON.parse(s) : null; } catch { return null; }
+  });
+
+  useEffect(() => {
+    if (authUser) return;
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('hubToken');
+    if (!token) { window.location.href = HUB_URL; return; }
+    (async () => {
+      try {
+        await ensureAuth();
+        const snap = await getDoc(doc(db, 'hub_sessions', token));
+        if (!snap.exists()) { window.location.href = HUB_URL; return; }
+        const session = snap.data();
+        const created = session.createdAt?.toDate?.();
+        if (created && (Date.now() - created.getTime()) > 5 * 60 * 1000) { window.location.href = HUB_URL; return; }
+        const userData = { username: session.username, name: session.name, role: session.role };
+        setAuthUser(userData);
+        localStorage.setItem('mayu_session', JSON.stringify(userData));
+        deleteDoc(doc(db, 'hub_sessions', token)).catch(() => {});
+        window.history.replaceState({}, '', window.location.pathname);
+      } catch (e) { console.warn('Hub SSO failed:', e); window.location.href = HUB_URL; }
+    })();
+  }, [authUser]);
+
+  if (!authUser) return null; // Redirecting to hub
+
   const [tab,setTab] = useState('project');
   const [selCat,setSelCat] = useState(null);
   const [busy,setBusy] = useState(false);
