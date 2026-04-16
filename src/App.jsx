@@ -8,7 +8,7 @@ import { fmtC, fmtN } from './utils/format.js';
 import { DEMO_MATS } from './constants/demoMats.js';
 import { MAYU_LOGO_SVG } from './components/ui/MayuLogo.jsx';
 import { Notify } from './components/ui/Notify.jsx';
-import { useNotification } from './hooks/useNotification.js';
+import { useNotification } from '@mayu/hooks';
 import ProjectView from './views/ProjectView.jsx';
 import BomView from './views/BomView.jsx';
 import DashboardView from './views/DashboardView.jsx';
