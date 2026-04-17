@@ -1,10 +1,13 @@
-import React from 'react';
-import { Layers, Box, Factory, AlertTriangle, Plus, Trash2, Home } from 'lucide-react';
+import React, { useState } from 'react';
+import { Layers, Box, Factory, Plus, Trash2, Home, Save, Cloud, Copy } from 'lucide-react';
 
 export default function ProjectView({ ctx }) {
-  const { mats, typs, proj, calc, crmProjects } = ctx.data;
+  const { mats, typs, proj, calc, crmProjects, projectId } = ctx.data;
   const { setProj, setTyps } = ctx.setters;
-  const { addTyp, updTyp, delTyp, loadCRMProject } = ctx.business;
+  const { addTyp, updTyp, delTyp, loadCRMProject, saveProject } = ctx.business;
+  const { busy } = ctx.io;
+  const [saveAsOpen, setSaveAsOpen] = useState(false);
+  const [saveAsName, setSaveAsName] = useState('');
 
   return (
     <>
@@ -31,10 +34,35 @@ export default function ProjectView({ ctx }) {
     )}
     <div className="max-w-4xl mx-auto space-y-6" style={{animation:'slideUp .3s ease'}}>
       <h2 className="text-2xl font-bold border-b pb-3">Proyecto</h2>
-      <div className="bg-amber-50 p-5 rounded-2xl border border-amber-200 shadow-sm border-l-4 border-l-amber-400">
-        <h3 className="font-bold text-amber-700 mb-2 flex items-center gap-2"><AlertTriangle size={20} className="text-amber-500"/> Modo Prueba Local</h3>
-        <p className="text-sm text-amber-600">BOM completo del POD Baumax cargado (153 ítems). Cantidades comerciales reales por POD desde el itemizado REV 03. Precios actualizados de IMEL, Sodimac, Steelfix, Fanaloza, CHC y otros proveedores.</p>
-      </div>
+      {projectId ? (
+        <div className="bg-green-50 p-4 rounded-2xl border border-green-200 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <Cloud size={20} className="text-green-600 shrink-0"/>
+            <div><p className="font-bold text-sm text-green-800">Guardado automaticamente</p><p className="text-xs text-green-600">Los cambios se sincronizan con el servidor.</p></div>
+          </div>
+          <button onClick={()=>{setSaveAsName(proj.name+' (copia)');setSaveAsOpen(true);}} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 bg-white border hover:bg-slate-50 shrink-0"><Copy size={14}/> Guardar como...</button>
+        </div>
+      ) : (
+        <div className="bg-blue-50 p-4 rounded-2xl border border-blue-200 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <Save size={20} className="text-blue-600 shrink-0"/>
+            <div><p className="font-bold text-sm text-blue-800">Proyecto sin guardar</p><p className="text-xs text-blue-600">Solo existe en este navegador. Guardalo para acceder desde cualquier dispositivo.</p></div>
+          </div>
+          <button onClick={()=>saveProject()} disabled={busy} className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 shrink-0"><Save size={14}/> Guardar</button>
+        </div>
+      )}
+      {saveAsOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4" style={{animation:'scaleIn .2s ease'}}>
+            <h3 className="font-bold text-lg">Guardar como nuevo proyecto</h3>
+            <input className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-amber-400 outline-none" placeholder="Nombre del proyecto" value={saveAsName} onChange={e=>setSaveAsName(e.target.value)} autoFocus onKeyDown={e=>{if(e.key==='Enter'&&saveAsName.trim()){saveProject(saveAsName.trim());setSaveAsOpen(false);setSaveAsName('');}}}/>
+            <div className="flex justify-end gap-2">
+              <button onClick={()=>setSaveAsOpen(false)} className="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100">Cancelar</button>
+              <button onClick={()=>{if(saveAsName.trim()){saveProject(saveAsName.trim());setSaveAsOpen(false);setSaveAsName('');}}} disabled={busy} className="px-4 py-2 rounded-xl text-sm font-bold text-white hover:opacity-90 disabled:opacity-50" style={{backgroundColor:'#D4A44C'}}>Guardar</button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="bg-white p-6 rounded-2xl border shadow-sm">
         <h3 className="font-bold text-slate-700 mb-4 flex items-center gap-2"><Layers size={20}/> Definición</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">

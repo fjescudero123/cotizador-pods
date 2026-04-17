@@ -21,7 +21,9 @@ export default function DesignView({ ctx }) {
     let s=[];
     if(actTyp.geometry.mode==='rect')s=[{l:'M1',len:Number(actTyp.geometry.length)||0,c:STROKE_COLORS[0]},{l:'M2',len:Number(actTyp.geometry.width)||0,c:STROKE_COLORS[1]},{l:'M3',len:Number(actTyp.geometry.length)||0,c:STROKE_COLORS[2]},{l:'M4',len:Number(actTyp.geometry.width)||0,c:STROKE_COLORS[3]}];
     else s=(actTyp.geometry.polygonSides||[]).map((x,i)=>({l:`M${i+1}`,len:Number(x.len)||0,c:STROKE_COLORS[i%STROKE_COLORS.length]}));
-    return s.map(x=>({...x,area:x.len*(Number(actTyp.geometry.height)||0)}));
+    const h=Number(actTyp.geometry.height)||0;
+    const dA=(Number(actTyp.geometry.doorCount)||1)*(Number(actTyp.geometry.doorWidth)||0.75)*(Number(actTyp.geometry.doorHeight)||2.0);
+    return s.map((x,i)=>({...x,area:Math.max(0,x.len*h-(i===0?dA:0))}));
   },[actTyp.geometry]);
   const cm=calc.typMetrics[actTypId]||{floorArea:0,perimeter:0,netWallArea:0,ceilingArea:0,effectiveFloorArea:0,piecesPerPod:0,totalBoxesTypology:0,isClosed:false};
   const mo=(fn)=>mats.filter(fn).map(m=>({v:m.id,l:`${m.name} - ${fmtC(m.cost)}/${m.unit}`}));

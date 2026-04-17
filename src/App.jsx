@@ -1,6 +1,6 @@
 // @ts-nocheck
 import React, { useState, useEffect, useMemo } from 'react';
-import { Calculator, Database, Layers, LayoutDashboard, LayoutGrid, Menu, X } from 'lucide-react';
+import { Calculator, Database, FolderOpen, Layers, LayoutDashboard, LayoutGrid, Menu, X } from 'lucide-react';
 import { UF_VALUE, REND_ADHESIVO_M2_SACO, REND_FRAGUE_M2_SACO, REND_ESPACIADOR_M2_BOLSA, REND_ESQUINERO_ML_TIRA, REND_PASTA_M2_SACO, REND_LATEX_M2_TINETA, REND_ESMALTE_M2_TINETA, REND_CUARZ_M2_TINETA, REND_MORTERO_M2_SACO, EST_REF_AREA_NETA, EST_MERMA, BASE_REF_AREA_PISO } from './constants/economics.js';
 import { defGeom, defConf, defTyp } from './constants/defaults.js';
 import { classifyToStage } from './utils/classify.js';
@@ -10,12 +10,13 @@ import { MAYU_LOGO_SVG } from './components/ui/MayuLogo.jsx';
 import { Notify } from './components/ui/Notify.jsx';
 import { useNotification } from '@mayu/hooks';
 import { db, ensureAuth } from './firebase.js';
-import { doc, getDoc, deleteDoc } from 'firebase/firestore';
+import { doc, getDoc, deleteDoc, getDocs, setDoc, collection, query, orderBy, serverTimestamp } from 'firebase/firestore';
 import ProjectView from './views/ProjectView.jsx';
 import BomView from './views/BomView.jsx';
 import DashboardView from './views/DashboardView.jsx';
 import DatabaseView from './views/DatabaseView.jsx';
 import DesignView from './views/DesignView.jsx';
+import ProjectsListView from './views/ProjectsListView.jsx';
 const useCRMProjects = () => { const [crmProjects] = useState([]); const [crmLoading] = useState(false); return { crmProjects, crmLoading }; };
 
 const HUB_URL = window.location.hostname === 'localhost' ? 'http://localhost:5178/' : 'https://mayu-hub.netlify.app/';
@@ -50,9 +51,12 @@ export default function App() {
 
   if (!authUser) return null; // Redirecting to hub
 
-  const [tab,setTab] = useState('project');
+  const [tab,setTab] = useState('projects');
   const [selCat,setSelCat] = useState(null);
   const [busy,setBusy] = useState(false);
+  const [projectId,setProjectId] = useState(null);
+  const [projectsList,setProjectsList] = useState([]);
+  const [projectsLoading,setProjectsLoading] = useState(false);
   const [expStage,setExpStage] = useState('estructura');
   const [notif, nfy, dismissNotif] = useNotification(4000);
   const [mobMenu,setMobMenu] = useState(false);
@@ -162,7 +166,95 @@ export default function App() {
   };
   const deleteMaterial=(matId)=>{if(!matId)return;setMats(p=>p.filter(m=>m.id!==matId));nfy("Eliminado.");};
   const swapMaterial=(fromId,toId)=>{setMats(p=>p.map(m=>{if(m.id===fromId)return{...m,draft:false};if(m.id===toId)return{...m,draft:true};return m;}));const nm=mats.find(m=>m.id===fromId)?.name||'';nfy(`"${nm}" activado. El anterior pasó a borrador.`);};
-  const clearAll=()=>{localStorage.removeItem('mayu_materialsDb');localStorage.removeItem('mayu_proj');localStorage.removeItem('mayu_typs');setMats([]);setProj({name:'Nuevo Proyecto',client:'',clientRut:'',clientAddress:'',clientPhone:'',clientEmail:'',contactName:'',marginPct:20,contingencyPct:5});const nid=`typ-${Date.now()}`;setTyps([{...defTyp,id:nid}]);setActTypId(nid);nfy("Memoria borrada.");};
+  const clearAll=()=>{localStorage.removeItem('mayu_materialsDb');localStorage.removeItem('mayu_proj');localStorage.removeItem('mayu_typs');setMats([]);setProj({name:'Nuevo Proyecto',client:'',clientRut:'',clientAddress:'',clientPhone:'',clientEmail:'',contactName:'',marginPct:20,contingencyPct:5});const nid=`typ-${Date.now()}`;setTyps([{...defTyp,id:nid}]);setActTypId(nid);setProjectId(null);nfy("Memoria borrada.");};
+
+  // ─── Project persistence (Firestore pod_projects) ────────────────────────────
+  const loadProjectsList = async () => {
+    setProjectsLoading(true);
+    try {
+      await ensureAuth();
+      const q = query(collection(db, 'pod_projects'), orderBy('updatedAt', 'desc'));
+      const snap = await getDocs(q);
+      setProjectsList(snap.docs.map(d => ({ _id: d.id, ...d.data() })));
+    } catch (e) {
+      nfy('Error cargando proyectos.', 'error');
+      console.warn('[loadProjectsList]', e);
+    } finally { setProjectsLoading(false); }
+  };
+  const saveProject = async (saveAsName = null) => {
+    setBusy(true);
+    try {
+      await ensureAuth();
+      const isNew = !projectId || saveAsName;
+      const docRef = isNew ? doc(collection(db, 'pod_projects')) : doc(db, 'pod_projects', projectId);
+      const projToSave = saveAsName ? { ...proj, name: saveAsName } : proj;
+      const payload = {
+        name: projToSave.name,
+        proj: projToSave,
+        typs,
+        updatedAt: serverTimestamp(),
+        createdBy: authUser?.username || 'unknown',
+        ...(isNew ? { createdAt: serverTimestamp() } : {}),
+      };
+      await setDoc(docRef, payload, { merge: !isNew });
+      if (isNew) { setProjectId(docRef.id); if (saveAsName) setProj(projToSave); }
+      nfy(isNew ? 'Proyecto guardado.' : 'Proyecto actualizado.');
+    } catch (e) {
+      nfy('Error guardando proyecto.', 'error');
+      console.warn('[saveProject]', e);
+    } finally { setBusy(false); }
+  };
+  const loadProject = (saved) => {
+    setProj(saved.proj);
+    setTyps(saved.typs);
+    setActTypId(saved.typs[0]?.id || null);
+    setProjectId(saved._id);
+    setTab('project');
+    nfy('Proyecto cargado: ' + saved.name);
+  };
+  const duplicateProject = (saved) => {
+    setProj({ ...saved.proj, name: saved.proj.name + ' (copia)' });
+    setTyps(saved.typs.map(t => ({ ...t, id: `typ-${Date.now()}-${Math.random().toString(36).slice(2,6)}` })));
+    setActTypId(null);
+    setProjectId(null);
+    setTab('project');
+    nfy('Proyecto duplicado. Modifica el nombre y guarda.');
+  };
+  const newProject = () => {
+    if (projectId && !window.confirm('¿Crear un proyecto nuevo? Los cambios no guardados se perderán.')) return;
+    const nid = `typ-${Date.now()}`;
+    setProj({ name: 'Nuevo Proyecto', client: '', clientRut: '', clientAddress: '', clientPhone: '', clientEmail: '', contactName: '', marginPct: 20, contingencyPct: 5 });
+    setTyps([{ ...defTyp, id: nid }]);
+    setActTypId(nid);
+    setProjectId(null);
+    setTab('project');
+    nfy('Nuevo proyecto creado.');
+  };
+  const deleteProject = async (docId) => {
+    if (!window.confirm('¿Eliminar este proyecto permanentemente?')) return;
+    setBusy(true);
+    try {
+      await ensureAuth();
+      await deleteDoc(doc(db, 'pod_projects', docId));
+      setProjectsList(p => p.filter(x => x._id !== docId));
+      if (projectId === docId) { setProjectId(null); }
+      nfy('Proyecto eliminado.');
+    } catch (e) {
+      nfy('Error eliminando proyecto.', 'error');
+    } finally { setBusy(false); }
+  };
+  // Auto-save to Firestore (debounced 3s, only when project is loaded)
+  useEffect(() => {
+    if (!projectId) return;
+    const timer = setTimeout(async () => {
+      try {
+        await ensureAuth();
+        await setDoc(doc(db, 'pod_projects', projectId), { name: proj.name, proj, typs, updatedAt: serverTimestamp() }, { merge: true });
+      } catch (e) { console.warn('[autoSave]', e); }
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [proj, typs, projectId]);
+
   const exportXls=async()=>{
     setBusy(true);
     try{
@@ -292,13 +384,13 @@ export default function App() {
     return{typMetrics:tm,totalPods:totP,bom,bomByCategory:byCat,costsByCategory:costsCat,totals:{material:totM,materialTheoretical:totMTheo,labor:totL,directCost:dc,contingency:cg,costWithContingency:cwc,grossMargin:spt-cwc,salePricePerPod:spp,salePriceTotal:spt}};
   },[typs,proj.contingencyPct,proj.marginPct,mats]);
   const ctx = useMemo(() => ({
-    data: { mats, typs, proj, calc, actTyp, actTypId, crmProjects },
+    data: { mats, typs, proj, calc, actTyp, actTypId, crmProjects, projectId, projectsList, projectsLoading },
     nav: { tab, setTab, expStage, setExpStage, selCat, setSelCat },
     setters: { setMats, setTyps, setProj, setActTypId },
-    business: { addTyp, updTyp, delTyp, updGeom, updConf, addSide, rmSide, updSide, uploadFile, directTS, saveMaterial, deleteMaterial, swapMaterial, clearAll, exportXls, dlTemplate, loadCRMProject, procTS },
+    business: { addTyp, updTyp, delTyp, updGeom, updConf, addSide, rmSide, updSide, uploadFile, directTS, saveMaterial, deleteMaterial, swapMaterial, clearAll, exportXls, dlTemplate, loadCRMProject, procTS, saveProject, loadProject, duplicateProject, newProject, deleteProject, loadProjectsList },
     io: { nfy, busy, setBusy },
-  }), [mats, typs, proj, calc, actTyp, actTypId, crmProjects, tab, expStage, selCat, busy]);
-  const navTabs=[{id:'project',icon:<Layers size={18}/>,l:'Proyecto'},{id:'design',icon:<LayoutGrid size={18}/>,l:'Diseño'},{id:'bom',icon:<Calculator size={18}/>,l:'BOM'},{id:'dashboard',icon:<LayoutDashboard size={18}/>,l:'Dashboard'},{id:'database',icon:<Database size={18}/>,l:'Data'}];
+  }), [mats, typs, proj, calc, actTyp, actTypId, crmProjects, projectId, projectsList, projectsLoading, tab, expStage, selCat, busy]);
+  const navTabs=[{id:'projects',icon:<FolderOpen size={18}/>,l:'Proyectos'},{id:'project',icon:<Layers size={18}/>,l:'Proyecto'},{id:'design',icon:<LayoutGrid size={18}/>,l:'Diseño'},{id:'bom',icon:<Calculator size={18}/>,l:'BOM'},{id:'dashboard',icon:<LayoutDashboard size={18}/>,l:'Dashboard'},{id:'database',icon:<Database size={18}/>,l:'Data'}];
   return(
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-800">
       <style>{`@keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}@keyframes scaleIn{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}.cscr::-webkit-scrollbar{height:6px}.cscr::-webkit-scrollbar-track{background:#f1f5f9;border-radius:3px}.cscr::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px}`}</style>
@@ -308,7 +400,7 @@ export default function App() {
         <div className="flex items-center gap-3">
           <button className="lg:hidden p-1.5 hover:bg-slate-100 rounded-lg text-slate-600" onClick={()=>setMobMenu(!mobMenu)}><Menu size={22}/></button>
           <MAYU_LOGO_SVG s={40}/>
-          <div><h1 className="text-lg font-bold leading-tight" style={{color:'#2c2c2a'}}>Cotizador de PODs</h1><p className="text-[10px] font-medium tracking-widest uppercase hidden sm:block" style={{color:'#9B9B5B'}}>Motor Paramétrico de Costos</p></div>
+          <div><h1 className="text-lg font-bold leading-tight" style={{color:'#2c2c2a'}}>Cotizador de PODs</h1>{projectId?<p className="text-[10px] text-slate-500 truncate max-w-[200px]">{proj.name}</p>:<p className="text-[10px] font-medium tracking-widest uppercase hidden sm:block" style={{color:'#9B9B5B'}}>Motor Paramétrico de Costos</p>}</div>
         </div>
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-[11px] font-bold border" style={{color:'#9B9B5B',borderColor:'#d4d0c8'}}><div className="w-2 h-2 rounded-full animate-pulse" style={{backgroundColor:'#9B9B5B'}}/><span className="hidden sm:inline">v2.0</span></div>
       </header>
@@ -321,6 +413,8 @@ export default function App() {
         </nav>
         {mobMenu&&<div className="fixed inset-0 bg-black/30 z-20 lg:hidden" onClick={()=>setMobMenu(false)}/>}
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-slate-50">
+          {/* TAB PROJECTS LIST */}
+          {tab==='projects'&&<ProjectsListView ctx={ctx}/>}
           {/* TAB PROJECT */}
           {tab==='project'&&<ProjectView ctx={ctx}/>}
           {/* TAB DESIGN */}
