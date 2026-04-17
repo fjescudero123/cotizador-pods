@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
-import { getFirestore, enableIndexedDbPersistence } from 'firebase/firestore';
-import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
+import { getFirestore, enableIndexedDbPersistence, connectFirestoreEmulator } from 'firebase/firestore';
+import { getAuth, signInAnonymously, onAuthStateChanged, connectAuthEmulator } from 'firebase/auth';
 
 const firebaseConfig = {
   apiKey: atob('QUl6YVN5QXNWZ2Y1R1JSdWYtaE50OU14cENKY2U2d2RiOWhVQjcw'),
@@ -12,6 +12,14 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 export const auth = getAuth(app);
+
+// --- Conexion a emuladores locales (VITE_USE_EMULATOR=true en .env.local) ---
+if (import.meta.env.VITE_USE_EMULATOR === 'true' && !globalThis.__mayuEmuWired) {
+  connectFirestoreEmulator(db, '127.0.0.1', 8080);
+  connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
+  globalThis.__mayuEmuWired = true;
+  console.info('[firebase] Emuladores conectados: firestore:8080, auth:9099');
+}
 
 enableIndexedDbPersistence(db).catch((err) => {
   if (err.code === 'failed-precondition') {
