@@ -171,7 +171,21 @@ export default function DesignView({ ctx }) {
         const planchas = selMat ? Math.ceil(cm.ceilingArea/PLANCHA_M2)*(Number(c.cieloLayers)||1) : 0;
         const planchaCost = selMat ? planchas*selMat.cost : 0;
         const insumoCost = cieloInsumos.reduce((s,m)=>s+(m.baseQty*m.cost),0);
-        const totalCielo = planchaCost + insumoCost;
+        // Costo de pintura del cielo (pasta + látex/esmalte proporcional al área del cielo).
+        let pintCieloCost = 0;
+        if(c.cieloTerm==='pintura' && c.cieloPaint){
+          const paintMat = mats.find(m=>m.id===c.cieloPaint);
+          if(paintMat){
+            const cCoats = Number(c.cieloCoats)||2;
+            const ca = cm.ceilingArea || 0;
+            const rend = paintMat.termGroup==='pintura_latex' ? REND_LATEX_M2_TINETA : (paintMat.termGroup==='pintura_esmalte' ? REND_ESMALTE_M2_TINETA : 0);
+            if(rend>0) pintCieloCost += (ca*cCoats/rend)*paintMat.cost;
+            // Pasta muro proporcional al área del cielo.
+            const pastaMat = tmAll.find(m=>m.termGroup==='pintura');
+            if(pastaMat && REND_PASTA_M2_SACO>0) pintCieloCost += (ca/REND_PASTA_M2_SACO)*pastaMat.cost;
+          }
+        }
+        const totalCielo = planchaCost + insumoCost + pintCieloCost;
         const sameAsWall = c.revWallCfg && c.cieloYC && (c.revWallCfg.includes(c.cieloYC));
         return(
         <div className="space-y-4">
@@ -219,7 +233,7 @@ export default function DesignView({ ctx }) {
                 {c.cieloTerm==='pintura'&&<p className="text-[10px] text-slate-400">Pasta, látex/esmalte se consolidan con los insumos de Terminación Muro.</p>}
               </div>
               <div className="bg-emerald-900/40 border border-emerald-500/30 rounded-xl p-4 flex justify-between items-center">
-                <div><p className="text-xs text-emerald-300/70 uppercase font-bold">Total cielo por POD</p><p className="text-[10px] text-slate-400 mt-0.5">Planchas ({fmtC(planchaCost)}) + insumos ({fmtC(insumoCost)})</p></div>
+                <div><p className="text-xs text-emerald-300/70 uppercase font-bold">Total cielo por POD</p><p className="text-[10px] text-slate-400 mt-0.5">Planchas ({fmtC(planchaCost)}) + insumos ({fmtC(insumoCost)}){pintCieloCost>0?` + pintura (${fmtC(pintCieloCost)})`:''}</p></div>
                 <div className="text-right"><p className="text-2xl font-black text-emerald-400">{fmtC(totalCielo)}</p><p className="text-xs text-emerald-300/60 mt-0.5">{fmtUF(totalCielo)}</p></div>
               </div>
               {cieloInsumos.length>0 && (<div className="bg-slate-800/50 rounded-xl overflow-hidden"><div className="p-3 border-b border-slate-700/50"><span className="text-[10px] text-slate-400 uppercase font-bold">Insumos instalación (fijos por POD)</span></div><div className="max-h-32 overflow-y-auto">{cieloInsumos.map(m=><div key={m.id} className="flex items-center justify-between px-3 py-1 border-b border-slate-700/30 text-[11px]"><span className="text-slate-300 flex-1 truncate mr-2">{m.name}</span><span className="text-white font-medium w-16 text-right shrink-0">{fmtC(m.baseQty*m.cost)}</span></div>)}</div></div>)}
