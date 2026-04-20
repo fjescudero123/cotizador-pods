@@ -60,9 +60,10 @@ export default function App() {
   const [tab,setTab] = useState('projects');
   const [selCat,setSelCat] = useState(null);
   const [busy,setBusy] = useState(false);
-  const [projectId,setProjectId] = useState(null);
+  const [projectId,setProjectId] = useState(()=>{try{return localStorage.getItem('mayu_projectId')||null;}catch{return null;}});
   const [projectsList,setProjectsList] = useState([]);
   const [projectsLoading,setProjectsLoading] = useState(false);
+  const [saveStatus,setSaveStatus] = useState('idle'); // 'idle'|'dirty'|'saving'|'saved'|'error'
   const [expStage,setExpStage] = useState('estructura');
   const [notif, nfy, dismissNotif] = useNotification(4000);
   const [mobMenu,setMobMenu] = useState(false);
@@ -104,6 +105,7 @@ export default function App() {
   },[]);
   useEffect(()=>{localStorage.setItem('mayu_proj',JSON.stringify(proj));},[proj]);
   useEffect(()=>{localStorage.setItem('mayu_typs',JSON.stringify(typs));},[typs]);
+  useEffect(()=>{try{if(projectId)localStorage.setItem('mayu_projectId',projectId);else localStorage.removeItem('mayu_projectId');}catch{}},[projectId]);
   const loadCRMProject = (crm) => {
     setProj(p => ({...p, name: crm.nombre || p.name, client: crm.cliente || p.client, contactName: crm.responsable_comercial || '', clientAddress: crm.ubicacion || ''}));
     if (crm.cantidad_unidades > 1) {
@@ -262,6 +264,7 @@ export default function App() {
       };
       await setDoc(docRef, payload, { merge: !isNew });
       if (isNew) { setProjectId(docRef.id); if (saveAsName) setProj(projToSave); }
+      setSaveStatus('saved');
       nfy(isNew ? 'Proyecto guardado.' : 'Proyecto actualizado.');
     } catch (e) {
       nfy('Error guardando proyecto.', 'error');
@@ -307,15 +310,20 @@ export default function App() {
       nfy('Error eliminando proyecto.', 'error');
     } finally { setBusy(false); }
   };
-  // Auto-save to Firestore (debounced 3s, only when project is loaded)
+  // Auto-save to Firestore (debounced 1.5s, only when project is loaded).
+  // Dispara tambien tras un reload: al rehidratar projectId desde localStorage,
+  // proj/typs vienen del ultimo estado local y se guardan como seguro.
   useEffect(() => {
     if (!projectId) return;
+    setSaveStatus('dirty');
     const timer = setTimeout(async () => {
+      setSaveStatus('saving');
       try {
         await ensureAuth();
         await setDoc(doc(db, 'pod_projects', projectId), { name: proj.name, proj, typs, updatedAt: serverTimestamp() }, { merge: true });
-      } catch (e) { console.warn('[autoSave]', e); }
-    }, 3000);
+        setSaveStatus('saved');
+      } catch (e) { console.warn('[autoSave]', e); setSaveStatus('error'); }
+    }, 1500);
     return () => clearTimeout(timer);
   }, [proj, typs, projectId]);
 
@@ -484,7 +492,18 @@ export default function App() {
         <div className="flex items-center gap-3">
           <button className="lg:hidden p-1.5 hover:bg-slate-100 rounded-lg text-slate-600" onClick={()=>setMobMenu(!mobMenu)}><Menu size={22}/></button>
           <MAYU_LOGO_SVG s={40}/>
-          <div><h1 className="text-lg font-bold leading-tight" style={{color:'#2c2c2a'}}>Cotizador de PODs</h1>{projectId?<p className="text-[10px] text-slate-500 truncate max-w-[200px]">{proj.name}</p>:<p className="text-[10px] font-medium tracking-widest uppercase hidden sm:block" style={{color:'#9B9B5B'}}>Motor Paramétrico de Costos</p>}</div>
+          <div>
+            <h1 className="text-lg font-bold leading-tight" style={{color:'#2c2c2a'}}>Cotizador de PODs</h1>
+            {projectId
+              ? <p className="text-[10px] text-slate-500 truncate max-w-[260px] flex items-center gap-1.5">
+                  <span className="truncate">{proj.name}</span>
+                  {saveStatus==='dirty' && <span className="text-amber-600 font-medium shrink-0">· Sin guardar</span>}
+                  {saveStatus==='saving' && <span className="text-blue-600 font-medium shrink-0">· Guardando…</span>}
+                  {saveStatus==='saved' && <span className="text-emerald-600 font-medium shrink-0">· Guardado</span>}
+                  {saveStatus==='error' && <span className="text-red-600 font-medium shrink-0">· Error al guardar</span>}
+                </p>
+              : <p className="text-[10px] font-medium tracking-widest uppercase hidden sm:block" style={{color:'#9B9B5B'}}>Motor Paramétrico de Costos</p>}
+          </div>
         </div>
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-[11px] font-bold border" style={{color:'#9B9B5B',borderColor:'#d4d0c8'}}><div className="w-2 h-2 rounded-full animate-pulse" style={{backgroundColor:'#9B9B5B'}}/><span className="hidden sm:inline">v2.0</span></div>
       </header>
