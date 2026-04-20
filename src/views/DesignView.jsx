@@ -161,6 +161,8 @@ export default function DesignView({ ctx }) {
         const revAll = mats.filter(m=>m.cat==='REVESTIMIENTO DE MURO');
         const revPlanchas = revAll.filter(m=>m.revRole&&m.revRole!=='revFibro');
         const cieloInsumos = mats.filter(m=>m.cat==='CIELO');
+        const tmAll = mats.filter(m=>m.cat==='TERMINACION DE MURO');
+        const cieloPaintOpts = [...tmAll.filter(m=>m.termGroup==='pintura_latex'),...tmAll.filter(m=>m.termGroup==='pintura_esmalte')];
         const PLANCHA_M2=2.88;
         const selMat = revAll.find(m=>m.id===c.cieloYC);
         const planchas = selMat ? Math.ceil(cm.ceilingArea/PLANCHA_M2)*(Number(c.cieloLayers)||1) : 0;
@@ -190,6 +192,28 @@ export default function DesignView({ ctx }) {
                   {selMat&&<span className="text-[10px] text-emerald-400 font-bold shrink-0">{planchas} pl</span>}
                 </div>
                 {sameAsWall&&<p className="text-[10px] text-cyan-400 mt-1">Mismo YC que muros - las planchas se consolidan en la compra</p>}
+              </div>
+              <div className="bg-slate-800/60 rounded-xl p-3 space-y-2">
+                <h5 className="text-[11px] text-blue-400 font-bold uppercase">Terminación</h5>
+                <div className="flex items-center gap-2">
+                  <select className="w-28 p-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-[11px] outline-none shrink-0" value={c.cieloTerm||'sin_pintar'} onChange={e=>updConf(actTypId,{cieloTerm:e.target.value})}>
+                    <option value="sin_pintar">Sin pintar</option>
+                    <option value="pintura">Pintura</option>
+                  </select>
+                  {c.cieloTerm==='pintura'&&<>
+                    <select className="flex-1 p-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-[11px] outline-none" value={c.cieloPaint||''} onChange={e=>updConf(actTypId,{cieloPaint:e.target.value})}>
+                      <option value="">Seleccionar pintura...</option>
+                      {cieloPaintOpts.map(o=><option key={o.id} value={o.id}>{o.name} - {fmtC(o.cost)}</option>)}
+                    </select>
+                    <select className="w-20 p-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-[10px] outline-none shrink-0" value={c.cieloCoats||2} onChange={e=>updConf(actTypId,{cieloCoats:Number(e.target.value)})}>
+                      <option value={1}>1 mano</option>
+                      <option value={2}>2 manos</option>
+                      <option value={3}>3 manos</option>
+                    </select>
+                  </>}
+                  {c.cieloTerm!=='pintura'&&<span className="text-[10px] text-slate-400 flex-1">El cielo queda sin terminación de pintura</span>}
+                </div>
+                {c.cieloTerm==='pintura'&&<p className="text-[10px] text-slate-400">Pasta, látex/esmalte se consolidan con los insumos de Terminación Muro.</p>}
               </div>
               <div className="bg-emerald-900/40 border border-emerald-500/30 rounded-xl p-4 flex justify-between items-center">
                 <div><p className="text-xs text-emerald-300/70 uppercase font-bold">Total cielo por POD</p><p className="text-[10px] text-slate-400 mt-0.5">Planchas ({fmtC(planchaCost)}) + insumos ({fmtC(insumoCost)})</p></div>

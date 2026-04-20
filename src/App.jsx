@@ -372,6 +372,14 @@ export default function App() {
               if(tw.type==='pintura'){pintArea+=wA;if(tw.paint==='POD_142'){latexArea+=wA;latexCoats=tw.coats||2;}if(tw.paint==='POD_143'){esmalteArea+=wA;esmalteCoats=tw.coats||2;}}});
               if(c.termFaldon==='ceramica')ceramArea+=0.6;
               if(c.termFaldon==='pintura')pintArea+=0.6;
+              // Cielo pintado: suma el area del cielo a pasta+latex/esmalte segun el material seleccionado.
+              if(c.cieloTerm==='pintura'&&c.cieloPaint){
+                const cPaintMat=mats.find(x=>x.id===c.cieloPaint);
+                const cCoats=Number(c.cieloCoats)||2;
+                pintArea+=ca;
+                if(cPaintMat?.termGroup==='pintura_latex'){latexArea+=ca;latexCoats=cCoats;}
+                else if(cPaintMat?.termGroup==='pintura_esmalte'){esmalteArea+=ca;esmalteCoats=cCoats;}
+              }
               if(mat.termGroup==='ceramica'&&ceramArea>0){
                 if(mat.id==='POD_099')pQ=ceramArea/REND_ADHESIVO_M2_SACO;
                 else if(mat.id==='CTE042')pQ=ceramArea/REND_FRAGUE_M2_SACO;

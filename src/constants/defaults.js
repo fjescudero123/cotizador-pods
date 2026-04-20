@@ -7,6 +7,7 @@ export const defGeom = {
 };
 export const defConf = {
   cieloYC:'CRI1916', cieloLayers:1,
+  cieloTerm:'sin_pintar', cieloPaint:'POD_142', cieloCoats:2,
   termWallCfg:'[{"type": "pintura", "paint": "POD_142", "coats": 2}, {"type": "ceramica"}, {"type": "pintura", "paint": "POD_143", "coats": 2}, {"type": "pintura", "paint": "POD_142", "coats": 2}]',
   termFaldon:'ceramica',
   pisoType:'ceramica',pisoMat:'POD_138',
