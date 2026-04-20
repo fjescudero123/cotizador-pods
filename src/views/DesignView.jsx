@@ -1,7 +1,7 @@
 // @ts-nocheck
 import React, { useMemo } from 'react';
 import {
-  Ruler, Plus, Trash2, Square, Hexagon, PanelBottom, ChevronDown, ChevronRight, Wrench, DoorOpen, CircleDollarSign
+  Ruler, Plus, Trash2, Square, Hexagon, PanelBottom, ChevronDown, ChevronRight, Wrench, DoorOpen, CircleDollarSign, Save
 } from 'lucide-react';
 import { STROKE_COLORS } from '../constants/colors.js';
 import { UF_VALUE, REND_ADHESIVO_M2_SACO, REND_FRAGUE_M2_SACO, REND_ESPACIADOR_M2_BOLSA, REND_ESQUINERO_ML_TIRA, REND_PASTA_M2_SACO, REND_LATEX_M2_TINETA, REND_ESMALTE_M2_TINETA, MO_COST_POD, REND_CUARZ_M2_TINETA, REND_MORTERO_M2_SACO, EST_REF_AREA_NETA, EST_REF_KG, EST_MERMA, BASE_REF_AREA_PISO } from '../constants/economics.js';
@@ -12,10 +12,11 @@ import { DkIn } from '../components/ui/DkIn.jsx';
 import { ResBadge } from '../components/ui/ResBadge.jsx';
 
 export default function DesignView({ ctx }) {
-  const { mats, typs, calc, actTyp, actTypId } = ctx.data;
+  const { mats, typs, calc, actTyp, actTypId, projectId } = ctx.data;
   const { expStage, setExpStage } = ctx.nav;
   const { setTyps, setActTypId } = ctx.setters;
-  const { updGeom, updConf, addSide, rmSide, updSide } = ctx.business;
+  const { updGeom, updConf, addSide, rmSide, updSide, saveProject } = ctx.business;
+  const { busy } = ctx.io;
 
   const wallData = useMemo(()=>{
     let s=[];
@@ -483,7 +484,10 @@ const AutoStage=({title,badge,badgeColor,desc,items,total,subtitle,children})=>(
     <div className="max-w-7xl mx-auto" style={{animation:'slideUp .3s ease'}}>
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 border-b pb-4 gap-3">
         <h2 className="text-2xl font-bold">Diseño & Parametría</h2>
-        <div className="flex items-center gap-3 bg-white p-2 px-4 rounded-xl border shadow-sm"><label className="font-bold text-slate-500 text-sm">Diseñando:</label><select value={actTypId} onChange={e=>setActTypId(e.target.value)} className="p-1 border-0 bg-transparent text-blue-700 font-black outline-none cursor-pointer text-base">{typs.map(t=><option key={t.id} value={t.id}>{t.name} ({t.count})</option>)}</select></div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button onClick={()=>saveProject()} disabled={busy} className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 shadow-sm"><Save size={14}/> {busy?'Guardando…':(projectId?'Guardar ahora':'Guardar como nuevo')}</button>
+          <div className="flex items-center gap-3 bg-white p-2 px-4 rounded-xl border shadow-sm"><label className="font-bold text-slate-500 text-sm">Diseñando:</label><select value={actTypId} onChange={e=>setActTypId(e.target.value)} className="p-1 border-0 bg-transparent text-blue-700 font-black outline-none cursor-pointer text-base">{typs.map(t=><option key={t.id} value={t.id}>{t.name} ({t.count})</option>)}</select></div>
+        </div>
       </div>
       <div className="flex bg-slate-200 p-1 rounded-xl w-max mb-6">
         <button onClick={()=>updGeom(actTypId,{mode:'rect'})} className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${actTyp.geometry.mode==='rect'?'bg-white shadow text-blue-600':'text-slate-500'}`}><Square size={16}/> Rectangular</button>
