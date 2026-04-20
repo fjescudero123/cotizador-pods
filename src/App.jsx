@@ -419,7 +419,15 @@ export default function App() {
               const slotToConf={tina:'artTina',wc_tanque:'artWCTanque',wc_taza:'artWCTaza',wc_asiento:'artWCAsiento',lavamanos:'artLavamanos',pedestal:'artPedestal',grif_lav:'artGrifLav',grif_tina:'artGrifTina',extractor:'artExtractor',mampara_barra:'artMampara'};
               const confKey=slotToConf[mat.slot];
               if(confKey && c[confKey]===mat.id){pQ=mat.baseQty;isP=true;}
-            } else {pQ=mat.baseQty;isP=true;}
+            } else {
+              // Insumos fijos tipo "soporte de tina" solo si hay una tina real (no receptaculo) seleccionada.
+              const isTinaOnly=/SOPORTE.*TINA|TINA.*SOPORTE/i.test(mat.name||'');
+              if(isTinaOnly){
+                const selTinaMat=mats.find(x=>x.id===c.artTina);
+                const realTina=!!selTinaMat && !/RECEPT/i.test(selTinaMat.name||'');
+                if(realTina){pQ=mat.baseQty;isP=true;}
+              } else {pQ=mat.baseQty;isP=true;}
+            }
           }
           if(mat.cat==='ESTRUCTURA'){if(mat.pres==='fijo'){pQ=mat.baseQty;}else{const areaRatio=nwa/EST_REF_AREA_NETA;pQ=mat.baseQty*areaRatio*(mat.pres==='kg'?1:(1+EST_MERMA));}isP=true;}
           if(mat.cat==='INSUMOS GENERALES'){pQ=mat.baseQty;isP=true;}

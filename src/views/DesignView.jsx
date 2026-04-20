@@ -226,8 +226,8 @@ export default function DesignView({ ctx }) {
       );}
       case 'sanitarios_artefactos': {
         const artAll = mats.filter(m=>m.cat==='SANITARIO ARTEFACTOS');
-        const artFijos = artAll.filter(m=>!m.slot);
-        const fijosCost = artFijos.reduce((s,m)=>s+(m.baseQty*m.cost),0);
+        const artFijosAll = artAll.filter(m=>!m.slot);
+        const isTinaOnlyInsumo = m => /SOPORTE.*TINA|TINA.*SOPORTE/i.test(m.name||'');
         const slotDefs=[
           {key:'artTina',slot:'tina',label:'Tina / Receptáculo'},
           {key:'artMampara',slot:'mampara_barra',label:'Mampara / Barra'},
@@ -242,6 +242,9 @@ export default function DesignView({ ctx }) {
         ];
         const selTina=artAll.find(m=>m.id===c.artTina);
         const isReceptaculo=!!(selTina && /RECEPT/i.test(selTina.name||''));
+        const hasRealTina=!!selTina && !isReceptaculo;
+        const artFijos = artFijosAll.filter(m=>!isTinaOnlyInsumo(m) || hasRealTina);
+        const fijosCost = artFijos.reduce((s,m)=>s+(m.baseQty*m.cost),0);
         const selCost = slotDefs.reduce((s,sd)=>{if(sd.key==='artMampara'&&!isReceptaculo)return s;const sel=artAll.find(m=>m.id===c[sd.key]);return s+(sel?sel.baseQty*sel.cost:0);},0);
         const totalArt = selCost + fijosCost;
         const slotGroups=[
