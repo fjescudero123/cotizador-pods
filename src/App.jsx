@@ -393,7 +393,11 @@ export default function App() {
               }catch(e){}
             }
           }
-          if(mat.cat==='CIELO'){pQ=mat.baseQty;isP=true;}
+          if(mat.cat==='CIELO'){
+            if(mat.cieloGroup==='yc'){
+              if(c.cieloYC===mat.id){const PLANCHA_M2=2.88;pQ=Math.ceil(ca/PLANCHA_M2)*(Number(c.cieloLayers)||1);isP=true;}
+            } else {pQ=mat.baseQty;isP=true;}
+          }
           if(mat.cat==='PISO'){
             if(mat.pisoGroup){
               if(mat.pisoGroup===c.pisoType && c.pisoMat===mat.id){pQ=Math.ceil(fa/2.34);isP=true;}

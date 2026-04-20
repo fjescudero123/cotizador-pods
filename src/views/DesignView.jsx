@@ -160,11 +160,14 @@ export default function DesignView({ ctx }) {
       case 'cielo': {
         const revAll = mats.filter(m=>m.cat==='REVESTIMIENTO DE MURO');
         const revPlanchas = revAll.filter(m=>m.revRole&&m.revRole!=='revFibro');
-        const cieloInsumos = mats.filter(m=>m.cat==='CIELO');
+        const cieloAll = mats.filter(m=>m.cat==='CIELO');
+        const cieloYcPlanchas = cieloAll.filter(m=>m.cieloGroup==='yc');
+        const cieloInsumos = cieloAll.filter(m=>m.cieloGroup!=='yc');
+        const ycOptions = [...cieloYcPlanchas, ...revPlanchas];
         const tmAll = mats.filter(m=>m.cat==='TERMINACION DE MURO');
         const cieloPaintOpts = [...tmAll.filter(m=>m.termGroup==='pintura_latex'),...tmAll.filter(m=>m.termGroup==='pintura_esmalte')];
         const PLANCHA_M2=2.88;
-        const selMat = revAll.find(m=>m.id===c.cieloYC);
+        const selMat = mats.find(m=>m.id===c.cieloYC);
         const planchas = selMat ? Math.ceil(cm.ceilingArea/PLANCHA_M2)*(Number(c.cieloLayers)||1) : 0;
         const planchaCost = selMat ? planchas*selMat.cost : 0;
         const insumoCost = cieloInsumos.reduce((s,m)=>s+(m.baseQty*m.cost),0);
@@ -183,7 +186,7 @@ export default function DesignView({ ctx }) {
                 <div className="flex items-center gap-2">
                   <select className="flex-1 p-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-[11px] outline-none" value={c.cieloYC||''} onChange={e=>updConf(actTypId,{cieloYC:e.target.value})}>
                     <option value="">Sin revestimiento</option>
-                    {revPlanchas.map(o=><option key={o.id} value={o.id}>{o.name} - {fmtC(o.cost)}</option>)}
+                    {ycOptions.map(o=><option key={o.id} value={o.id}>{o.name} - {fmtC(o.cost)}</option>)}
                   </select>
                   <select className="w-16 p-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-[10px] outline-none shrink-0" value={c.cieloLayers||1} onChange={e=>updConf(actTypId,{cieloLayers:Number(e.target.value)})}>
                     <option value={1}>x1</option>

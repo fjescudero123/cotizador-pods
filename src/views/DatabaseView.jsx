@@ -27,7 +27,7 @@ export default function DatabaseView({ ctx }) {
 
   const editClick = (m) => {
     setEditId(m.id);
-    setManItem({code:m.id,cat:m.cat,name:m.name,brand:m.brand||'',unit:m.unit||'UNIDAD',cost:m.cost,qty:m.baseQty,pres:m.pres||'',tsN:m.techSheetName||'',tsD:m.techSheetData||'',subline:m.termGroup||m.pisoGroup||m.slot||m.revRole||''});
+    setManItem({code:m.id,cat:m.cat,name:m.name,brand:m.brand||'',unit:m.unit||'UNIDAD',cost:m.cost,qty:m.baseQty,pres:m.pres||'',tsN:m.techSheetName||'',tsD:m.techSheetData||'',subline:m.termGroup||m.pisoGroup||m.slot||m.revRole||m.cieloGroup||''});
     setShowManual(true);
   };
 
@@ -50,6 +50,7 @@ export default function DatabaseView({ ctx }) {
       ...(catU==='PISO'&&sub?{pisoGroup:sub}:{}),
       ...((catU==='SANITARIO ARTEFACTOS'||catU==='PUERTAS'||catU==='ACCESORIOS'||catU==='ELECTRICO')&&sub?{slot:sub}:{}),
       ...(catU==='REVESTIMIENTO DE MURO'&&sub?{revRole:sub}:{}),
+      ...(catU==='CIELO'&&sub?{cieloGroup:sub}:{}),
     };
     saveMaterial(it, editId || null);
     setManItem({code:'',cat:'',name:'',unit:'UNIDAD',cost:'',qty:'',pres:'',tsN:'',tsD:'',subline:''});
