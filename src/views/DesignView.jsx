@@ -230,6 +230,7 @@ export default function DesignView({ ctx }) {
         const fijosCost = artFijos.reduce((s,m)=>s+(m.baseQty*m.cost),0);
         const slotDefs=[
           {key:'artTina',slot:'tina',label:'Tina / Receptáculo'},
+          {key:'artMampara',slot:'mampara_barra',label:'Mampara / Barra'},
           {key:'artWCTanque',slot:'wc_tanque',label:'WC Tanque'},
           {key:'artWCTaza',slot:'wc_taza',label:'WC Taza'},
           {key:'artWCAsiento',slot:'wc_asiento',label:'WC Asiento'},
@@ -239,15 +240,18 @@ export default function DesignView({ ctx }) {
           {key:'artGrifTina',slot:'grif_tina',label:'Grifería Tina/Ducha'},
           {key:'artExtractor',slot:'extractor',label:'Extractor'},
         ];
-        const selCost = slotDefs.reduce((s,sd)=>{const sel=artAll.find(m=>m.id===c[sd.key]);return s+(sel?sel.baseQty*sel.cost:0);},0);
+        const selTina=artAll.find(m=>m.id===c.artTina);
+        const isReceptaculo=!!(selTina && /RECEPT/i.test(selTina.name||''));
+        const selCost = slotDefs.reduce((s,sd)=>{if(sd.key==='artMampara'&&!isReceptaculo)return s;const sel=artAll.find(m=>m.id===c[sd.key]);return s+(sel?sel.baseQty*sel.cost:0);},0);
         const totalArt = selCost + fijosCost;
         const slotGroups=[
-          {title:'Tina / Receptáculo',slots:['artTina']},
+          {title: isReceptaculo?'Receptáculo + Mampara':'Tina / Receptáculo', slots: isReceptaculo?['artTina','artMampara']:['artTina']},
           {title:'WC',slots:['artWCTanque','artWCTaza','artWCAsiento']},
           {title:'Lavamanos',slots:['artLavamanos','artPedestal']},
           {title:'Griferías',slots:['artGrifLav','artGrifTina']},
           {title:'Extractor',slots:['artExtractor']},
         ];
+        const onArtChange=(sk,val)=>{if(sk==='artTina'){const nm=artAll.find(m=>m.id===val);const nr=!!(nm && /RECEPT/i.test(nm.name||''));updConf(actTypId, nr?{artTina:val}:{artTina:val,artMampara:''});}else{updConf(actTypId,{[sk]:val});}};
         return(
         <div className="space-y-4">
           <div className="bg-slate-900 rounded-2xl border border-slate-700 overflow-hidden text-white">
@@ -261,7 +265,7 @@ export default function DesignView({ ctx }) {
                 <div className={`grid gap-2 ${sg.slots.length>=3?'grid-cols-3':sg.slots.length===2?'grid-cols-2':''}`}>
                   {sg.slots.map(sk=>{const sd=slotDefs.find(d=>d.key===sk);if(!sd)return null;const opts=artAll.filter(m=>m.slot===sd.slot);const sel=artAll.find(m=>m.id===c[sk]);return(
                     <div key={sk}>
-                      <select className="w-full p-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-xs outline-none" value={c[sk]||''} onChange={e=>updConf(actTypId,{[sk]:e.target.value})}>
+                      <select className="w-full p-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-xs outline-none" value={c[sk]||''} onChange={e=>onArtChange(sk,e.target.value)}>
                         <option value="">{sd.label}...</option>
                         {opts.map(o=><option key={o.id} value={o.id}>{o.name} - {fmtC(o.cost)}</option>)}
                       </select>
