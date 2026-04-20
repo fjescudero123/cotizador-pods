@@ -11,6 +11,12 @@ import { Notify } from './components/ui/Notify.jsx';
 import { useNotification } from '@mayu/hooks';
 import { db, ensureAuth } from './firebase.js';
 import { doc, getDoc, deleteDoc, getDocs, setDoc, collection, query, orderBy, serverTimestamp } from 'firebase/firestore';
+import {
+  onMaterialsChange,
+  saveMaterial as fsSaveMaterial,
+  saveMaterialsBatch as fsSaveMaterialsBatch,
+  deleteMaterial as fsDeleteMaterial,
+} from './firestoreService.js';
 import ProjectView from './views/ProjectView.jsx';
 import BomView from './views/BomView.jsx';
 import DashboardView from './views/DashboardView.jsx';
@@ -66,17 +72,36 @@ export default function App() {
   const [actTypId,setActTypId] = useState(typs[0]?.id);
   const { crmProjects, crmLoading } = useCRMProjects();
   const actTyp = useMemo(()=>typs.find(t=>t.id===actTypId)||typs[0]||defTyp,[typs,actTypId]);
+  // Suscripcion realtime a pod_materials (data maestra compartida entre usuarios).
+  // Primer snapshot vacio -> migrar localStorage legacy o sembrar DEMO_MATS.
   useEffect(()=>{
-    const demoMats = DEMO_MATS;
-    /* demoMats array extracted to constants/demoMats.js */
-    const saved = localStorage.getItem('mayu_materialsDb');
-    if (saved) {
-      try { const parsed = JSON.parse(saved); if (parsed.length > 0) { setMats(parsed); nfy(`Biblioteca cargada: ${parsed.length} ítems.`); return; } } catch(e) {}
-    }
-    setMats(demoMats.map(m => ({ waste:0,laborY:0,laborC:0,techSheetName:'',techSheetData:'',...m, catOriginal: m.cat, cat: classifyToStage(m.cat) })));
-    nfy("BOM Baumax cargado: 153 ítems reales con precios y cantidades comerciales por POD.");
+    let seeded = false;
+    let notified = false;
+    const unsub = onMaterialsChange(async (items) => {
+      if (items.length > 0) {
+        setMats(items);
+        if (!notified) { nfy(`Biblioteca cargada: ${items.length} ítems.`); notified = true; }
+        return;
+      }
+      if (seeded) return;
+      seeded = true;
+      try {
+        const saved = localStorage.getItem('mayu_materialsDb');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed.length > 0) {
+            await fsSaveMaterialsBatch(parsed);
+            nfy(`Migrando biblioteca local a Firestore: ${parsed.length} ítems.`);
+            return;
+          }
+        }
+      } catch(e) {}
+      const seed = DEMO_MATS.map(m => ({ waste:0,laborY:0,laborC:0,techSheetName:'',techSheetData:'',...m, catOriginal: m.cat, cat: classifyToStage(m.cat) }));
+      await fsSaveMaterialsBatch(seed);
+      nfy("BOM Baumax cargado: 153 ítems reales con precios y cantidades comerciales por POD.");
+    });
+    return () => unsub();
   },[]);
-  useEffect(()=>{if(mats.length>0)localStorage.setItem('mayu_materialsDb',JSON.stringify(mats));},[mats]);
   useEffect(()=>{localStorage.setItem('mayu_proj',JSON.stringify(proj));},[proj]);
   useEffect(()=>{localStorage.setItem('mayu_typs',JSON.stringify(typs));},[typs]);
   const loadCRMProject = (crm) => {
@@ -138,35 +163,74 @@ export default function App() {
         }
         ndb.push({id:fid,cat:classified,catOriginal:cat,name:nm,brand:r[iPr]?String(r[iPr]).trim():'',unit:r[iU]?String(r[iU]).trim().toUpperCase():'UNIDAD',cost:parseFloat(String(r[iCo]||'0').replace(',','.'))||0,baseQty:parseFloat(String(r[iCa]||'0').replace(',','.'))||0,waste:0,laborY:0,laborC:0,pres:pres,techSheetName:'',techSheetData:'',...subProps});
       });
-      setMats(prev => {
-        const merged = [...prev];
-        let added = 0, updated = 0, drafts = 0;
-        ndb.forEach(newItem => {
-          const idx = merged.findIndex(m => m.id === newItem.id);
-          if (idx >= 0) { merged[idx] = {...merged[idx], ...newItem}; updated++; }
-          else {
-            const hasSub = newItem.termGroup||newItem.pisoGroup||newItem.slot||newItem.revRole;
-            if (!hasSub) { newItem.draft = true; drafts++; }
-            merged.push(newItem); added++;
-          }
-        });
-        const msg = drafts > 0
-          ? `${added} nuevos (${drafts} en borrador), ${updated} actualizados. Total: ${merged.length}. Los ítems fijos nuevos deben activarse manualmente en Data Maestra.`
-          : `${added} nuevos, ${updated} actualizados. Total: ${merged.length}`;
-        nfy(msg);
-        return merged;
+      const merged = [...mats];
+      let added = 0, updated = 0, drafts = 0;
+      ndb.forEach(newItem => {
+        const idx = merged.findIndex(m => m.id === newItem.id);
+        if (idx >= 0) { merged[idx] = {...merged[idx], ...newItem}; updated++; }
+        else {
+          const hasSub = newItem.termGroup||newItem.pisoGroup||newItem.slot||newItem.revRole;
+          if (!hasSub) { newItem.draft = true; drafts++; }
+          merged.push(newItem); added++;
+        }
       });
+      setMats(merged);
+      await fsSaveMaterialsBatch(merged);
+      const msg = drafts > 0
+        ? `${added} nuevos (${drafts} en borrador), ${updated} actualizados. Total: ${merged.length}. Los ítems fijos nuevos deben activarse manualmente en Data Maestra.`
+        : `${added} nuevos, ${updated} actualizados. Total: ${merged.length}`;
+      nfy(msg);
     }catch(e){nfy("Error procesando Excel.",'error');}finally{setBusy(false);e.target.value=null;}
   };
   const procTS=(f,cb)=>{if(!f)return;if(f.size>2*1024*1024){nfy("Max 2MB.",'error');return;}const r=new FileReader();r.onload=ev=>cb(f.name,ev.target.result);r.readAsDataURL(f);};
-  const directTS=async(e,mid)=>{procTS(e.target.files[0],async(n,d)=>{setMats(p=>p.map(m=>m.id===mid?{...m,techSheetName:n,techSheetData:d}:m));nfy("Ficha vinculada.");});e.target.value=null;};
-  const saveMaterial=(itemData, existingId)=>{
-    if(existingId)setMats(p=>p.map(x=>x.id===existingId?{...x,...itemData}:x));else setMats(p=>[itemData,...p]);
+  const directTS=async(e,mid)=>{
+    procTS(e.target.files[0],async(n,d)=>{
+      const updated = mats.find(m=>m.id===mid);
+      if(!updated)return;
+      const next = {...updated, techSheetName:n, techSheetData:d};
+      setMats(p=>p.map(m=>m.id===mid?next:m));
+      await fsSaveMaterial(next);
+      nfy("Ficha vinculada.");
+    });
+    e.target.value=null;
+  };
+  const saveMaterial=async(itemData, existingId)=>{
+    if(existingId){
+      const current = mats.find(m=>m.id===existingId);
+      const next = {...(current||{}), ...itemData, id: existingId};
+      setMats(p=>p.map(x=>x.id===existingId?next:x));
+      await fsSaveMaterial(next);
+    } else {
+      setMats(p=>[itemData,...p]);
+      await fsSaveMaterial(itemData);
+    }
     nfy("Ítem guardado.");
   };
-  const deleteMaterial=(matId)=>{if(!matId)return;setMats(p=>p.filter(m=>m.id!==matId));nfy("Eliminado.");};
-  const swapMaterial=(fromId,toId)=>{setMats(p=>p.map(m=>{if(m.id===fromId)return{...m,draft:false};if(m.id===toId)return{...m,draft:true};return m;}));const nm=mats.find(m=>m.id===fromId)?.name||'';nfy(`"${nm}" activado. El anterior pasó a borrador.`);};
-  const clearAll=()=>{localStorage.removeItem('mayu_materialsDb');localStorage.removeItem('mayu_proj');localStorage.removeItem('mayu_typs');setMats([]);setProj({name:'Nuevo Proyecto',client:'',clientRut:'',clientAddress:'',clientPhone:'',clientEmail:'',contactName:'',marginPct:20,contingencyPct:5});const nid=`typ-${Date.now()}`;setTyps([{...defTyp,id:nid}]);setActTypId(nid);setProjectId(null);nfy("Memoria borrada.");};
+  const deleteMaterial=async(matId)=>{
+    if(!matId)return;
+    setMats(p=>p.filter(m=>m.id!==matId));
+    await fsDeleteMaterial(matId);
+    nfy("Eliminado.");
+  };
+  const swapMaterial=async(fromId,toId)=>{
+    const from = mats.find(m=>m.id===fromId);
+    const to = mats.find(m=>m.id===toId);
+    if(!from||!to)return;
+    const nextFrom = {...from, draft:false};
+    const nextTo = {...to, draft:true};
+    setMats(p=>p.map(m=>m.id===fromId?nextFrom:(m.id===toId?nextTo:m)));
+    await Promise.all([fsSaveMaterial(nextFrom), fsSaveMaterial(nextTo)]);
+    nfy(`"${from.name}" activado. El anterior pasó a borrador.`);
+  };
+  const activateMaterial=async(matId)=>{
+    const current = mats.find(m=>m.id===matId);
+    if(!current)return;
+    const next = {...current, draft:false};
+    setMats(p=>p.map(m=>m.id===matId?next:m));
+    await fsSaveMaterial(next);
+  };
+  // Borra solo el estado personal (proyecto/tipologías locales). La data maestra es compartida y no se toca.
+  const clearAll=()=>{localStorage.removeItem('mayu_proj');localStorage.removeItem('mayu_typs');setProj({name:'Nuevo Proyecto',client:'',clientRut:'',clientAddress:'',clientPhone:'',clientEmail:'',contactName:'',marginPct:20,contingencyPct:5});const nid=`typ-${Date.now()}`;setTyps([{...defTyp,id:nid}]);setActTypId(nid);setProjectId(null);nfy("Proyecto local reiniciado.");};
 
   // ─── Project persistence (Firestore pod_projects) ────────────────────────────
   const loadProjectsList = async () => {
@@ -387,7 +451,7 @@ export default function App() {
     data: { mats, typs, proj, calc, actTyp, actTypId, crmProjects, projectId, projectsList, projectsLoading },
     nav: { tab, setTab, expStage, setExpStage, selCat, setSelCat },
     setters: { setMats, setTyps, setProj, setActTypId },
-    business: { addTyp, updTyp, delTyp, updGeom, updConf, addSide, rmSide, updSide, uploadFile, directTS, saveMaterial, deleteMaterial, swapMaterial, clearAll, exportXls, dlTemplate, loadCRMProject, procTS, saveProject, loadProject, duplicateProject, newProject, deleteProject, loadProjectsList },
+    business: { addTyp, updTyp, delTyp, updGeom, updConf, addSide, rmSide, updSide, uploadFile, directTS, saveMaterial, deleteMaterial, swapMaterial, activateMaterial, clearAll, exportXls, dlTemplate, loadCRMProject, procTS, saveProject, loadProject, duplicateProject, newProject, deleteProject, loadProjectsList },
     io: { nfy, busy, setBusy },
   }), [mats, typs, proj, calc, actTyp, actTypId, crmProjects, projectId, projectsList, projectsLoading, tab, expStage, selCat, busy]);
   const navTabs=[{id:'projects',icon:<FolderOpen size={18}/>,l:'Proyectos'},{id:'project',icon:<Layers size={18}/>,l:'Proyecto'},{id:'design',icon:<LayoutGrid size={18}/>,l:'Diseño'},{id:'bom',icon:<Calculator size={18}/>,l:'BOM'},{id:'dashboard',icon:<LayoutDashboard size={18}/>,l:'Dashboard'},{id:'database',icon:<Database size={18}/>,l:'Data'}];

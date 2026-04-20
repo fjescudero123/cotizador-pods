@@ -7,8 +7,7 @@ import { ConfirmDlg } from '../components/ui/ConfirmDlg.jsx';
 
 export default function DatabaseView({ ctx }) {
   const { mats } = ctx.data;
-  const { setMats } = ctx.setters;
-  const { uploadFile, directTS, saveMaterial, deleteMaterial, swapMaterial, clearAll, dlTemplate, procTS } = ctx.business;
+  const { uploadFile, directTS, saveMaterial, deleteMaterial, swapMaterial, activateMaterial, clearAll, dlTemplate, procTS } = ctx.business;
   const { nfy, busy } = ctx.io;
 
   const [showClear, setShowClear] = useState(false);
@@ -113,14 +112,14 @@ export default function DatabaseView({ ctx }) {
                 <td className="p-2"><span className="text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">{m.pres||'-'}</span></td>
                 <td className="p-2 text-right font-medium text-blue-600 text-xs">{m.baseQty} <span className="text-slate-400 text-[10px]">{m.unit}</span></td>
                 <td className="p-2 text-right text-xs">{fmtC(m.cost)}</td>
-                <td className="p-2 text-center"><div className="flex justify-center gap-1">{m.draft&&<button onClick={()=>setMats(p=>p.map(x=>x.id===m.id?{...x,draft:false}:x))} className="text-green-600 hover:text-green-800 bg-green-50 hover:bg-green-100 p-1.5 rounded-lg transition" title="Activar (incluir en cálculo)"><CheckCircle2 size={13}/></button>}{m.draft&&<button onClick={()=>setSwapFrom(m.id)} className="text-amber-600 hover:text-amber-800 bg-amber-50 hover:bg-amber-100 p-1.5 rounded-lg transition" title="Reemplazar un ítem activo"><RefreshCw size={13}/></button>}<button onClick={()=>editClick(m)} className="text-blue-500 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 p-1.5 rounded-lg transition" title="Editar / Reclasificar"><Edit2 size={13}/></button><button onClick={()=>setDelId(m.id)} className="text-red-400 hover:text-red-600 bg-red-50 hover:bg-red-100 p-1.5 rounded-lg transition" title="Eliminar"><Trash2 size={13}/></button></div></td>
+                <td className="p-2 text-center"><div className="flex justify-center gap-1">{m.draft&&<button onClick={()=>activateMaterial(m.id)} className="text-green-600 hover:text-green-800 bg-green-50 hover:bg-green-100 p-1.5 rounded-lg transition" title="Activar (incluir en cálculo)"><CheckCircle2 size={13}/></button>}{m.draft&&<button onClick={()=>setSwapFrom(m.id)} className="text-amber-600 hover:text-amber-800 bg-amber-50 hover:bg-amber-100 p-1.5 rounded-lg transition" title="Reemplazar un ítem activo"><RefreshCw size={13}/></button>}<button onClick={()=>editClick(m)} className="text-blue-500 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 p-1.5 rounded-lg transition" title="Editar / Reclasificar"><Edit2 size={13}/></button><button onClick={()=>setDelId(m.id)} className="text-red-400 hover:text-red-600 bg-red-50 hover:bg-red-100 p-1.5 rounded-lg transition" title="Eliminar"><Trash2 size={13}/></button></div></td>
               </tr>);})}
             </tbody></table>}
           </div>
         </div>
       </div>
 
-      {showClear&&<ConfirmDlg title="¿Borrar Todo?" msg="Se borrará TODA la memoria local." onOk={()=>{clearAll();setShowClear(false);}} onNo={()=>setShowClear(false)} danger/>}
+      {showClear&&<ConfirmDlg title="¿Reiniciar proyecto local?" msg="Se borrará el proyecto y tipologías locales. La data maestra compartida NO se toca." onOk={()=>{clearAll();setShowClear(false);}} onNo={()=>setShowClear(false)} danger/>}
       {delId&&<ConfirmDlg title="¿Eliminar?" msg="Se eliminará permanentemente." onOk={confirmDel} onNo={()=>setDelId(null)} danger/>}
 
       {swapFrom&&(()=>{const draft=mats.find(m=>m.id===swapFrom);if(!draft)return null;const activos=mats.filter(m=>m.cat===draft.cat&&!m.draft&&m.id!==draft.id);return(
