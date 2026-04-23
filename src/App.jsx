@@ -105,6 +105,32 @@ export default function App() {
   },[]);
   useEffect(()=>{localStorage.setItem('mayu_proj',JSON.stringify(proj));},[proj]);
   useEffect(()=>{localStorage.setItem('mayu_typs',JSON.stringify(typs));},[typs]);
+  // Auto-heal refs rotas a mats que no existen (ej. defaults legacy POD_142 que ya no están en DB).
+  useEffect(()=>{
+    if(mats.length===0)return;
+    const ids=new Set(mats.map(m=>m.id));
+    const paintLatex=mats.find(m=>m.termGroup==='pintura_latex');
+    const paintEsm=mats.find(m=>m.termGroup==='pintura_esmalte');
+    const defaultPaint=(paintLatex||paintEsm)?.id||'';
+    const ceramTile=mats.find(m=>m.termGroup==='ceramica'&&m.unit==='MT2');
+    let changed=false;
+    const nxt=typs.map(t=>{
+      const cfg={...t.config};
+      let dirty=false;
+      try{
+        const tw=JSON.parse(cfg.termWallCfg||'[]');
+        tw.forEach(w=>{
+          if(w.type==='pintura'&&w.paint&&!ids.has(w.paint)){w.paint=defaultPaint;dirty=true;}
+          if(w.type==='ceramica'&&w.mat&&!ids.has(w.mat)){w.mat=ceramTile?.id||'';dirty=true;}
+        });
+        if(dirty)cfg.termWallCfg=JSON.stringify(tw);
+      }catch{}
+      if(cfg.termFaldonMat&&!ids.has(cfg.termFaldonMat)){cfg.termFaldonMat=ceramTile?.id||'';dirty=true;}
+      if(dirty){changed=true;return{...t,config:cfg};}
+      return t;
+    });
+    if(changed)setTyps(nxt);
+  },[mats]);
   useEffect(()=>{try{if(projectId)localStorage.setItem('mayu_projectId',projectId);else localStorage.removeItem('mayu_projectId');}catch{}},[projectId]);
   const loadCRMProject = (crm) => {
     setProj(p => ({...p, name: crm.nombre || p.name, client: crm.cliente || p.client, contactName: crm.responsable_comercial || '', clientAddress: crm.ubicacion || ''}));
@@ -375,11 +401,14 @@ export default function App() {
               let wallLens=[];if(g.mode==='rect')wallLens=[Number(g.length)||0,Number(g.width)||0,Number(g.length)||0,Number(g.width)||0];
               else wallLens=(g.polygonSides||[]).map(s=>Number(s.len)||0);
               let ceramArea=0,pintArea=0,latexArea=0,esmalteArea=0,latexCoats=2,esmalteCoats=2;
+              const ceramAreaByMat={};
               twCfg.forEach((tw,wi)=>{if(wi>=wallLens.length)return;let wA=wallLens[wi]*h;if(wi===0){const dA=(Number(g.doorCount)||1)*(Number(g.doorWidth)||0.75)*(Number(g.doorHeight)||2.0);wA=Math.max(0,wA-dA);}
-              if(tw.type==='ceramica')ceramArea+=wA;
-              if(tw.type==='pintura'){pintArea+=wA;if(tw.paint==='POD_142'){latexArea+=wA;latexCoats=tw.coats||2;}if(tw.paint==='POD_143'){esmalteArea+=wA;esmalteCoats=tw.coats||2;}}});
-              if(c.termFaldon==='ceramica')ceramArea+=0.6;
-              if(c.termFaldon==='pintura')pintArea+=0.6;
+              if(tw.type==='ceramica'){ceramArea+=wA;if(tw.mat)ceramAreaByMat[tw.mat]=(ceramAreaByMat[tw.mat]||0)+wA;}
+              if(tw.type==='pintura'){pintArea+=wA;if(tw.paint){const pm=mats.find(x=>x.id===tw.paint);if(pm?.termGroup==='pintura_latex'){latexArea+=wA;latexCoats=tw.coats||2;}else if(pm?.termGroup==='pintura_esmalte'){esmalteArea+=wA;esmalteCoats=tw.coats||2;}}}});
+              // Faldón solo suma área si hay una tina real seleccionada.
+              const _hasTinaReal=c.artTina&&mats.some(m=>m.id===c.artTina&&!/RECEPT/i.test(m.name||''));
+              if(_hasTinaReal && c.termFaldon==='ceramica'){ceramArea+=0.6;if(c.termFaldonMat)ceramAreaByMat[c.termFaldonMat]=(ceramAreaByMat[c.termFaldonMat]||0)+0.6;}
+              if(_hasTinaReal && c.termFaldon==='pintura')pintArea+=0.6;
               // Cielo pintado: suma el area del cielo a pasta+latex/esmalte segun el material seleccionado.
               if(c.cieloTerm==='pintura'&&c.cieloPaint){
                 const cPaintMat=mats.find(x=>x.id===c.cieloPaint);
@@ -389,12 +418,20 @@ export default function App() {
                 else if(cPaintMat?.termGroup==='pintura_esmalte'){esmalteArea+=ca;esmalteCoats=cCoats;}
               }
               if(mat.termGroup==='ceramica'&&ceramArea>0){
-                if(mat.id==='POD_099')pQ=ceramArea/REND_ADHESIVO_M2_SACO;
-                else if(mat.id==='CTE042')pQ=ceramArea/REND_FRAGUE_M2_SACO;
-                else if(mat.id==='POD_100')pQ=ceramArea/REND_ESPACIADOR_M2_BOLSA;
-                else if(mat.id==='POD_139'){const nCorners=Math.min(wallLens.length,twCfg.filter(w=>w.type==='ceramica').length)*2;pQ=nCorners*h/REND_ESQUINERO_ML_TIRA;}
-                else pQ=ceramArea/10;
-                isP=true;}
+                if(mat.unit==='MT2'){
+                  // Palmeta seleccionable por elevación/faldón: área solo por murallas que la referencian.
+                  const myArea=ceramAreaByMat[mat.id]||0;
+                  if(myArea>0){pQ=myArea*(1+EST_MERMA);isP=true;}
+                } else {
+                  // Insumo de instalación cerámica: detecta por nombre para independencia del ID.
+                  const nm=(mat.name||'').toUpperCase();
+                  if(/ADHESIVO/.test(nm)){pQ=ceramArea/REND_ADHESIVO_M2_SACO;isP=true;}
+                  else if(/FRAG[UÜ]E/.test(nm)){pQ=ceramArea/REND_FRAGUE_M2_SACO;isP=true;}
+                  else if(/ESPACIADOR/.test(nm)){pQ=ceramArea/REND_ESPACIADOR_M2_BOLSA;isP=true;}
+                  else if(/ESQUINERO/.test(nm)){const nCorners=Math.min(wallLens.length,twCfg.filter(w=>w.type==='ceramica').length)*2;pQ=nCorners*h/REND_ESQUINERO_ML_TIRA;isP=true;}
+                  else {pQ=mat.baseQty||ceramArea/10;isP=true;}
+                }
+              }
               if(mat.termGroup==='pintura'&&pintArea>0){pQ=pintArea/REND_PASTA_M2_SACO;isP=true;}
               if(mat.termGroup==='pintura_latex'&&latexArea>0){pQ=latexArea*latexCoats/REND_LATEX_M2_TINETA;isP=true;}
               if(mat.termGroup==='pintura_esmalte'&&esmalteArea>0){pQ=esmalteArea*esmalteCoats/REND_ESMALTE_M2_TINETA;isP=true;}

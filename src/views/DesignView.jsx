@@ -308,12 +308,25 @@ export default function DesignView({ ctx }) {
         const tmAll = mats.filter(m=>m.cat==='TERMINACION DE MURO');
         const tmFijos = tmAll.filter(m=>!m.termGroup);
         const tmCeram = tmAll.filter(m=>m.termGroup==='ceramica');
+        const tmCeramTiles = tmCeram.filter(m=>m.unit==='MT2');
+        const tmCeramInsumos = tmCeram.filter(m=>m.unit!=='MT2');
         const tmPintLatex = tmAll.filter(m=>m.termGroup==='pintura_latex');
         const tmPintEsm = tmAll.filter(m=>m.termGroup==='pintura_esmalte');
         const tmPintInsumo = tmAll.filter(m=>m.termGroup==='pintura');
         const paintOpts = [...tmPintLatex,...tmPintEsm];
         let twCfg=[];try{twCfg=JSON.parse(c.termWallCfg||'[]');}catch(e){}
-        const updTW=(wi,field,val)=>{const nw=JSON.parse(JSON.stringify(twCfg));while(nw.length<=wi)nw.push({type:'pintura',paint:'POD_142',coats:2});nw[wi]={...nw[wi],[field]:field==='coats'?Number(val):val};updConf(actTypId,{termWallCfg:JSON.stringify(nw)});};
+        const updTW=(wi,field,val)=>{
+          const nw=JSON.parse(JSON.stringify(twCfg));
+          while(nw.length<=wi)nw.push({type:'pintura',paint:'',coats:2});
+          if(field==='type' && val==='ceramica' && !nw[wi].mat && tmCeramTiles.length>0){
+            nw[wi]={...nw[wi],type:'ceramica',mat:tmCeramTiles[0].id};
+          } else if(field==='type' && val==='pintura' && !nw[wi].paint && paintOpts.length>0){
+            nw[wi]={...nw[wi],type:'pintura',paint:paintOpts[0].id};
+          } else {
+            nw[wi]={...nw[wi],[field]:field==='coats'?Number(val):val};
+          }
+          updConf(actTypId,{termWallCfg:JSON.stringify(nw)});
+        };
         const hasTina = c.artTina && mats.some(m=>m.id===c.artTina);
         const fijosCost = tmFijos.reduce((s,m)=>s+(m.baseQty*m.cost),0);
         return(
@@ -342,24 +355,41 @@ export default function DesignView({ ctx }) {
                         <option value={3}>3 manos</option>
                       </select>
                     </>}
-                    {tw.type==='ceramica'&&<span className="text-[10px] text-slate-400 flex-1">Adhesivo + fragüe + esquinero automáticos</span>}
+                    {tw.type==='ceramica'&&(
+                      tmCeramTiles.length>0?(
+                        <select className="flex-1 p-1.5 bg-slate-700 border border-slate-600 rounded text-white text-[11px] outline-none" value={tw.mat||''} onChange={e=>updTW(wi,'mat',e.target.value)}>
+                          <option value="">Seleccionar palmeta...</option>
+                          {tmCeramTiles.map(o=><option key={o.id} value={o.id}>{o.name} - {fmtC(o.cost)}/m²</option>)}
+                        </select>
+                      ):<span className="text-[10px] text-amber-300 flex-1">No hay palmetas cerámicas cargadas (producto MT2 con sublínea Cerámica).</span>
+                    )}
                   </div>
                 </div>
               );})}
               {hasTina&&<div className="bg-slate-800/60 rounded-xl p-3 space-y-2">
                 <div className="flex items-center gap-2 mb-1"><span className="text-[11px] text-amber-400 font-bold uppercase">Faldón Tina</span></div>
-                <select className="w-full p-1.5 bg-slate-700 border border-slate-600 rounded text-white text-[11px] outline-none" value={c.termFaldon||'ceramica'} onChange={e=>updConf(actTypId,{termFaldon:e.target.value})}>
-                  <option value="ceramica">Cerámica</option>
-                  <option value="pintura">Pintura</option>
-                </select>
+                <div className="flex items-center gap-2">
+                  <select className="w-24 p-1.5 bg-slate-700 border border-slate-600 rounded text-white text-[11px] outline-none shrink-0" value={c.termFaldon||'ceramica'} onChange={e=>{const nv=e.target.value;const upd={termFaldon:nv};if(nv==='ceramica'&&!c.termFaldonMat&&tmCeramTiles.length>0)upd.termFaldonMat=tmCeramTiles[0].id;updConf(actTypId,upd);}}>
+                    <option value="ceramica">Cerámica</option>
+                    <option value="pintura">Pintura</option>
+                  </select>
+                  {c.termFaldon==='ceramica'&&(
+                    tmCeramTiles.length>0?(
+                      <select className="flex-1 p-1.5 bg-slate-700 border border-slate-600 rounded text-white text-[11px] outline-none" value={c.termFaldonMat||''} onChange={e=>updConf(actTypId,{termFaldonMat:e.target.value})}>
+                        <option value="">Seleccionar palmeta...</option>
+                        {tmCeramTiles.map(o=><option key={o.id} value={o.id}>{o.name} - {fmtC(o.cost)}/m²</option>)}
+                      </select>
+                    ):<span className="text-[10px] text-amber-300 flex-1">No hay palmetas cerámicas cargadas.</span>
+                  )}
+                </div>
               </div>}
               <div className="bg-emerald-900/40 border border-emerald-500/30 rounded-xl p-4">
                 <p className="text-xs text-emerald-300/70 uppercase font-bold mb-2">Insumos automáticos según selección</p>
                 <div className="grid grid-cols-2 gap-2 text-[10px]">
-                  <div><span className="text-slate-400">Cerámica:</span> <span className="text-white">{tmCeram.map(m=>m.name.substring(0,25)).join(', ')}</span></div>
-                  <div><span className="text-slate-400">Pintura:</span> <span className="text-white">{tmPintInsumo.map(m=>m.name.substring(0,25)).join(', ')}</span></div>
+                  <div><span className="text-slate-400">Cerámica:</span> <span className="text-white">{tmCeramInsumos.length?tmCeramInsumos.map(m=>m.name.substring(0,28)).join(', '):'(ninguno clasificado con sublínea Cerámica)'}</span></div>
+                  <div><span className="text-slate-400">Pintura:</span> <span className="text-white">{tmPintInsumo.length?tmPintInsumo.map(m=>m.name.substring(0,28)).join(', '):'(ninguno clasificado con sublínea Pintura)'}</span></div>
                 </div>
-                <p className="text-[10px] text-slate-500 mt-2">+ Fijos: impermeab. Cave Polflex, guardapolvo, molduras ({fmtC(fijosCost)})</p>
+                <p className="text-[10px] text-slate-500 mt-2">+ Fijos {tmFijos.length>0?`(${tmFijos.length}): ${tmFijos.map(m=>m.name.substring(0,20)).join(', ').substring(0,120)}`:''} ({fmtC(fijosCost)})</p>
               </div>
             </div>
           </div>

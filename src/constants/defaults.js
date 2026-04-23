@@ -8,8 +8,8 @@ export const defGeom = {
 export const defConf = {
   cieloYC:'CRI1916', cieloLayers:1,
   cieloTerm:'sin_pintar', cieloPaint:'POD_142', cieloCoats:2,
-  termWallCfg:'[{"type": "pintura", "paint": "POD_142", "coats": 2}, {"type": "ceramica"}, {"type": "pintura", "paint": "POD_143", "coats": 2}, {"type": "pintura", "paint": "POD_142", "coats": 2}]',
-  termFaldon:'ceramica',
+  termWallCfg:'[{"type": "pintura", "paint": "", "coats": 2}, {"type": "ceramica"}, {"type": "pintura", "paint": "", "coats": 2}, {"type": "pintura", "paint": "", "coats": 2}]',
+  termFaldon:'ceramica', termFaldonMat:'',
   pisoType:'ceramica',pisoMat:'POD_138',
   revFibro:'POD_085',
   revWallCfg:'[{"int": {"mat": "CRI1916", "layers": 1}, "ext": {"mat": "POD_081", "layers": 1}}, {"int": {"mat": "CRI1916_81", "layers": 2}, "ext": {"mat": "CRI1916_81", "layers": 1}}, {"int": {"mat": "CRI1916", "layers": 1}, "ext": {"mat": "POD_081", "layers": 1}}, {"int": {"mat": "POD_081", "layers": 1}, "ext": {"mat": "CRI010", "layers": 1}}]',
