@@ -328,7 +328,35 @@ export default function DesignView({ ctx }) {
           updConf(actTypId,{termWallCfg:JSON.stringify(nw)});
         };
         const hasTina = c.artTina && mats.some(m=>m.id===c.artTina);
+        const hasTinaReal = c.artTina && mats.some(m=>m.id===c.artTina && !/RECEPT/i.test(m.name||''));
         const fijosCost = tmFijos.reduce((s,m)=>s+(m.baseQty*m.cost),0);
+        const hTM = Number(actTyp.geometry.height)||2.4;
+        let ceramAreaTM=0,pintAreaTM=0,latexAreaTM=0,esmalteAreaTM=0,latexCoatsTM=2,esmalteCoatsTM=2;
+        const ceramAreaByMatTM={};
+        wallData.forEach((w,wi)=>{const tw=twCfg[wi];if(!tw)return;const wA=w.area;
+          if(tw.type==='ceramica'){ceramAreaTM+=wA;if(tw.mat)ceramAreaByMatTM[tw.mat]=(ceramAreaByMatTM[tw.mat]||0)+wA;}
+          if(tw.type==='pintura'&&tw.paint){const pm=mats.find(x=>x.id===tw.paint);pintAreaTM+=wA;if(pm?.termGroup==='pintura_latex'){latexAreaTM+=wA;latexCoatsTM=tw.coats||2;}else if(pm?.termGroup==='pintura_esmalte'){esmalteAreaTM+=wA;esmalteCoatsTM=tw.coats||2;}}
+        });
+        if(hasTinaReal && c.termFaldon==='ceramica'){ceramAreaTM+=0.6;if(c.termFaldonMat)ceramAreaByMatTM[c.termFaldonMat]=(ceramAreaByMatTM[c.termFaldonMat]||0)+0.6;}
+        if(hasTinaReal && c.termFaldon==='pintura')pintAreaTM+=0.6;
+        if(c.cieloTerm==='pintura'&&c.cieloPaint){const cPaintMat=mats.find(x=>x.id===c.cieloPaint);const cCoats=Number(c.cieloCoats)||2;const caTM=cm.ceilingArea||0;pintAreaTM+=caTM;if(cPaintMat?.termGroup==='pintura_latex'){latexAreaTM+=caTM;latexCoatsTM=cCoats;}else if(cPaintMat?.termGroup==='pintura_esmalte'){esmalteAreaTM+=caTM;esmalteCoatsTM=cCoats;}}
+        let tilesCost=0;
+        tmCeramTiles.forEach(m=>{const a=ceramAreaByMatTM[m.id]||0;if(a>0)tilesCost+=a*(1+EST_MERMA)*m.cost;});
+        let ceramInsCost=0;
+        if(ceramAreaTM>0){tmCeramInsumos.forEach(m=>{const nm=(m.name||'').toUpperCase();let q=0;
+          if(/ADHESIVO/.test(nm))q=ceramAreaTM/REND_ADHESIVO_M2_SACO;
+          else if(/FRAG[UÜ]E/.test(nm))q=ceramAreaTM/REND_FRAGUE_M2_SACO;
+          else if(/ESPACIADOR/.test(nm))q=ceramAreaTM/REND_ESPACIADOR_M2_BOLSA;
+          else if(/ESQUINERO/.test(nm)){const nCorners=Math.min(wallData.length,twCfg.filter(w=>w&&w.type==='ceramica').length)*2;q=nCorners*hTM/REND_ESQUINERO_ML_TIRA;}
+          else q=m.baseQty||ceramAreaTM/10;
+          ceramInsCost+=q*m.cost;
+        });}
+        const pastaMat=tmPintInsumo[0];
+        const pastaCost = pastaMat && pintAreaTM>0 ? (pintAreaTM/REND_PASTA_M2_SACO)*pastaMat.cost : 0;
+        let paintCost=0;
+        if(latexAreaTM>0){const lm=mats.find(m=>m.id===(twCfg.find(w=>w&&w.type==='pintura'&&mats.find(x=>x.id===w.paint)?.termGroup==='pintura_latex')||{}).paint)||tmPintLatex[0];if(lm)paintCost+=(latexAreaTM*latexCoatsTM/REND_LATEX_M2_TINETA)*lm.cost;}
+        if(esmalteAreaTM>0){const em=mats.find(m=>m.id===(twCfg.find(w=>w&&w.type==='pintura'&&mats.find(x=>x.id===w.paint)?.termGroup==='pintura_esmalte')||{}).paint)||tmPintEsm[0];if(em)paintCost+=(esmalteAreaTM*esmalteCoatsTM/REND_ESMALTE_M2_TINETA)*em.cost;}
+        const totalTM = fijosCost + tilesCost + ceramInsCost + pastaCost + paintCost;
         return(
         <div className="space-y-4">
           <div className="bg-slate-900 rounded-2xl border border-slate-700 overflow-hidden text-white">
@@ -383,8 +411,12 @@ export default function DesignView({ ctx }) {
                   )}
                 </div>
               </div>}
-              <div className="bg-emerald-900/40 border border-emerald-500/30 rounded-xl p-4">
-                <p className="text-xs text-emerald-300/70 uppercase font-bold mb-2">Insumos automáticos según selección</p>
+              <div className="bg-emerald-900/40 border border-emerald-500/30 rounded-xl p-4 flex justify-between items-center">
+                <div><p className="text-xs text-emerald-300/70 uppercase font-bold">Total terminación muro por POD</p><p className="text-[10px] text-slate-400 mt-0.5">Fijos ({fmtC(fijosCost)}) + palmetas ({fmtC(tilesCost)}) + insumos cerámica ({fmtC(ceramInsCost)}) + pasta ({fmtC(pastaCost)}) + pintura ({fmtC(paintCost)})</p></div>
+                <div className="text-right"><p className="text-2xl font-black text-emerald-400">{fmtC(totalTM)}</p><p className="text-xs text-emerald-300/60 mt-0.5">{fmtUF(totalTM)}</p></div>
+              </div>
+              <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-4">
+                <p className="text-xs text-slate-400 uppercase font-bold mb-2">Insumos automáticos según selección</p>
                 <div className="grid grid-cols-2 gap-2 text-[10px]">
                   <div><span className="text-slate-400">Cerámica:</span> <span className="text-white">{tmCeramInsumos.length?tmCeramInsumos.map(m=>m.name.substring(0,28)).join(', '):'(ninguno clasificado con sublínea Cerámica)'}</span></div>
                   <div><span className="text-slate-400">Pintura:</span> <span className="text-white">{tmPintInsumo.length?tmPintInsumo.map(m=>m.name.substring(0,28)).join(', '):'(ninguno clasificado con sublínea Pintura)'}</span></div>
