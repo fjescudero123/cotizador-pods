@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Calculator, Send, Download, X, BarChart3 } from 'lucide-react';
 import { fmtC, fmtN, fmtUF } from '../utils/format.js';
-import { UF_VALUE } from '../constants/economics.js';
+import { getUF } from '../state/ufStore.js';
 import { CostChart } from '../components/ui/CostChart.jsx';
 
 export default function DashboardView({ ctx }) {
@@ -25,7 +25,7 @@ export default function DashboardView({ ctx }) {
 <div class="client-box"><b>Cliente:</b> ${proj.client||'—'}<br><b>RUT:</b> ${proj.clientRut||'—'}<br><b>Contacto:</b> ${proj.contactName||'—'}<br><b>Proyecto:</b> ${proj.name||'—'}${proj.clientAddress?'<br><b>Direcci\u00f3n:</b> '+proj.clientAddress:''}</div>
 <div class="kpi"><div class="kpi-box"><div class="kpi-vg">${fmtC(calc.totals.salePriceTotal)}</div><div class="kpi-l">Valor total del proyecto</div><div class="kpi-s">${fmtUF(calc.totals.salePriceTotal)}</div></div><div class="kpi-box"><div class="kpi-v">${calc.totalPods}</div><div class="kpi-l">Total PODs</div></div></div>
 <div class="sec"><div class="sec-t">Detalle por tipolog\u00eda</div><table><thead><tr><th>Tipo de ba\u00f1o</th><th style="text-align:center">Cantidad</th><th style="text-align:right">\u00c1rea</th><th style="text-align:right">Precio Unit.</th><th style="text-align:right">Subtotal</th></tr></thead><tbody>${typPriceRows}<tr class="tot-row"><td colspan="4" style="text-align:right;border-top:2px solid #D4A44C">Total Neto</td><td style="text-align:right;border-top:2px solid #D4A44C;color:#D4A44C">${fmtC(calc.totals.salePriceTotal)}</td></tr></tbody></table></div>
-<div class="sec"><table style="font-size:13px"><tr><td style="padding:6px 0;color:#999">Valor UF referencial</td><td style="padding:6px 0;text-align:right">$${UF_VALUE.toLocaleString('es-CL')}</td></tr><tr><td style="padding:6px 0;color:#999">Precio por POD (UF)</td><td style="padding:6px 0;text-align:right">${fmtUF(calc.totals.salePricePerPod)}</td></tr><tr><td style="padding:6px 0;color:#999">Valor total proyecto (UF)</td><td style="padding:6px 0;text-align:right;font-weight:600">${fmtUF(calc.totals.salePriceTotal)}</td></tr></table></div>
+<div class="sec"><table style="font-size:13px"><tr><td style="padding:6px 0;color:#999">Valor UF referencial</td><td style="padding:6px 0;text-align:right">$${getUF().toLocaleString('es-CL')}</td></tr><tr><td style="padding:6px 0;color:#999">Precio por POD (UF)</td><td style="padding:6px 0;text-align:right">${fmtUF(calc.totals.salePricePerPod)}</td></tr><tr><td style="padding:6px 0;color:#999">Valor total proyecto (UF)</td><td style="padding:6px 0;text-align:right;font-weight:600">${fmtUF(calc.totals.salePriceTotal)}</td></tr></table></div>
 <div class="note"><b>Alcance:</b> Suministro e instalaci\u00f3n de PODs de ba\u00f1o prefabricados, incluyendo estructura steel frame, revestimientos, instalaciones sanitarias, el\u00e9ctricas, terminaciones y artefactos seg\u00fan especificaci\u00f3n t\u00e9cnica.<br><b>No incluye:</b> Obras civiles de conexi\u00f3n, transporte a obra, grúa de montaje.</div>
 <div class="foot"><p>MAYU · Cotizaci\u00f3n preliminar ${cotNum} · ${today}</p><p>Valores en CLP neto (sin IVA) · Sujeto a confirmaci\u00f3n de stock y plazos de entrega</p></div>
 </body></html>`;

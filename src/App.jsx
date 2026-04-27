@@ -1,7 +1,8 @@
 // @ts-nocheck
 import React, { useState, useEffect, useMemo } from 'react';
 import { Calculator, Database, FolderOpen, Layers, LayoutDashboard, LayoutGrid, Menu, X } from 'lucide-react';
-import { UF_VALUE, REND_ADHESIVO_M2_SACO, REND_FRAGUE_M2_SACO, REND_ESPACIADOR_M2_BOLSA, REND_ESQUINERO_ML_TIRA, REND_PASTA_M2_SACO, REND_LATEX_M2_TINETA, REND_ESMALTE_M2_TINETA, REND_CUARZ_M2_TINETA, REND_MORTERO_M2_SACO, EST_REF_AREA_NETA, EST_MERMA, BASE_REF_AREA_PISO } from './constants/economics.js';
+import { REND_ADHESIVO_M2_SACO, REND_FRAGUE_M2_SACO, REND_ESPACIADOR_M2_BOLSA, REND_ESQUINERO_ML_TIRA, REND_PASTA_M2_SACO, REND_LATEX_M2_TINETA, REND_ESMALTE_M2_TINETA, REND_CUARZ_M2_TINETA, REND_MORTERO_M2_SACO, EST_REF_AREA_NETA, EST_MERMA, BASE_REF_AREA_PISO } from './constants/economics.js';
+import { getUF, useUFValue, initUF } from './state/ufStore.js';
 import { defGeom, defConf, defTyp } from './constants/defaults.js';
 import { classifyToStage } from './utils/classify.js';
 import { fmtC, fmtN } from './utils/format.js';
@@ -56,6 +57,10 @@ export default function App() {
   }, [authUser]);
 
   if (!authUser) return null; // Redirecting to hub
+
+  // UF reactiva — el hook fuerza rerender cuando el store la refresca.
+  useUFValue();
+  useEffect(() => { initUF(); }, []);
 
   const [tab,setTab] = useState('projects');
   const [selCat,setSelCat] = useState(null);
@@ -357,7 +362,8 @@ export default function App() {
     setBusy(true);
     try{
       const X=await import('https://esm.sh/xlsx');const wb=X.utils.book_new();
-      const res=[["COTIZACIÓN PRELIMINAR - MAYU POD"],["Proyecto:",proj.name],["Cliente:",proj.client],["Fecha:",new Date().toLocaleDateString('es-CL')],["Valor UF:",UF_VALUE],[""],["Total PODs:",calc.totalPods],["Costo Directo:",calc.totals.directCost],["Mano de Obra:",calc.totals.labor],["Contingencia:",calc.totals.contingency],["Precio Venta Total (CLP):",calc.totals.salePriceTotal],["Precio Venta Total (UF):",Math.round(calc.totals.salePriceTotal/UF_VALUE*100)/100],["Precio / POD (CLP):",calc.totals.salePricePerPod],["Precio / POD (UF):",Math.round(calc.totals.salePricePerPod/UF_VALUE*100)/100],["Margen Bruto:",calc.totals.grossMargin]];
+      const uf=getUF();
+      const res=[["COTIZACIÓN PRELIMINAR - MAYU POD"],["Proyecto:",proj.name],["Cliente:",proj.client],["Fecha:",new Date().toLocaleDateString('es-CL')],["Valor UF:",uf],[""],["Total PODs:",calc.totalPods],["Costo Directo:",calc.totals.directCost],["Mano de Obra:",calc.totals.labor],["Contingencia:",calc.totals.contingency],["Precio Venta Total (CLP):",calc.totals.salePriceTotal],["Precio Venta Total (UF):",Math.round(calc.totals.salePriceTotal/uf*100)/100],["Precio / POD (CLP):",calc.totals.salePricePerPod],["Precio / POD (UF):",Math.round(calc.totals.salePricePerPod/uf*100)/100],["Margen Bruto:",calc.totals.grossMargin]];
       X.utils.book_append_sheet(wb,X.utils.aoa_to_sheet(res),"Resumen");
       const bH=["Partida","Código","Descripción","Presentación","Cant. Necesaria","Cant. Compra","P.U.","Costo"];
       const bR=calc.bom.map(i=>[i.category,i.key,i.name,i.pres||'',Math.round(i.realQty*100)/100,i.purchaseQty,i.cost,Math.round(i.materialCost)]);

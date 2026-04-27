@@ -1,4 +1,6 @@
-export const UF_VALUE = 39841.72;
+// La UF ya no es constante: se lee del store reactivo en `state/ufStore.js`,
+// que cachea Firestore `eco_indicators/uf` y refresca contra mindicador.cl
+// si el valor tiene mas de 7 dias. Usar `getUF()` o `useUFValue()` segun contexto.
 export const REND_ADHESIVO_M2_SACO = 3.83;   // Bekron A·C: 1.6kg/m²×4mm=6.4kg/m² -> saco 24.5kg/6.4
 export const REND_FRAGUE_M2_SACO = 11.1;     // Bekron Fragüe: 0.45kg/m² -> saco 5kg/0.45
 export const REND_ESPACIADOR_M2_BOLSA = 5;   // ~1 bolsa cada 5m²

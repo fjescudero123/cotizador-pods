@@ -4,7 +4,7 @@ import {
   Ruler, Plus, Trash2, Square, Hexagon, PanelBottom, ChevronDown, ChevronRight, Wrench, DoorOpen, CircleDollarSign, Save
 } from 'lucide-react';
 import { STROKE_COLORS } from '../constants/colors.js';
-import { UF_VALUE, REND_ADHESIVO_M2_SACO, REND_FRAGUE_M2_SACO, REND_ESPACIADOR_M2_BOLSA, REND_ESQUINERO_ML_TIRA, REND_PASTA_M2_SACO, REND_LATEX_M2_TINETA, REND_ESMALTE_M2_TINETA, MO_COST_POD, REND_CUARZ_M2_TINETA, REND_MORTERO_M2_SACO, EST_REF_AREA_NETA, EST_REF_KG, EST_MERMA, BASE_REF_AREA_PISO } from '../constants/economics.js';
+import { REND_ADHESIVO_M2_SACO, REND_FRAGUE_M2_SACO, REND_ESPACIADOR_M2_BOLSA, REND_ESQUINERO_ML_TIRA, REND_PASTA_M2_SACO, REND_LATEX_M2_TINETA, REND_ESMALTE_M2_TINETA, MO_COST_POD, REND_CUARZ_M2_TINETA, REND_MORTERO_M2_SACO, EST_REF_AREA_NETA, EST_REF_KG, EST_MERMA, BASE_REF_AREA_PISO } from '../constants/economics.js';
 import { STAGES } from '../constants/stages.js';
 import { fmtC, fmtN, fmtUF } from '../utils/format.js';
 import { DkSel } from '../components/ui/DkSel.jsx';
