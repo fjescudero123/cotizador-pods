@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Layers, Box, Factory, Plus, Trash2, Home, Save, Cloud, Copy } from 'lucide-react';
+import { Layers, Box, Factory, Plus, Trash2, Home, Save, Cloud, Copy, GripVertical } from 'lucide-react';
 
 export default function ProjectView({ ctx }) {
   const { mats, typs, proj, calc, crmProjects, projectId } = ctx.data;
@@ -8,6 +8,21 @@ export default function ProjectView({ ctx }) {
   const { busy } = ctx.io;
   const [saveAsOpen, setSaveAsOpen] = useState(false);
   const [saveAsName, setSaveAsName] = useState('');
+  const [dragId, setDragId] = useState(null);
+  const [overId, setOverId] = useState(null);
+
+  const reorderTo = (targetId) => {
+    if (!dragId || dragId === targetId) return;
+    setTyps(prev => {
+      const fromIdx = prev.findIndex(x => x.id === dragId);
+      const toIdx = prev.findIndex(x => x.id === targetId);
+      if (fromIdx < 0 || toIdx < 0) return prev;
+      const next = [...prev];
+      const [moved] = next.splice(fromIdx, 1);
+      next.splice(toIdx, 0, moved);
+      return next;
+    });
+  };
 
   return (
     <>
@@ -81,8 +96,18 @@ export default function ProjectView({ ctx }) {
       <div className="bg-white p-6 rounded-2xl border shadow-sm">
         <div className="flex justify-between items-center mb-4"><h3 className="font-bold text-slate-700 flex items-center gap-2"><Box size={20}/> Tipologías</h3><span className="bg-blue-100 text-blue-700 font-bold px-3 py-1.5 rounded-full text-sm">{calc.totalPods} PODs</span></div>
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[440px]"><thead><tr className="bg-slate-100 text-sm text-slate-600"><th className="p-3 border-b">Nombre</th><th className="p-3 border-b w-28 text-center">Cantidad</th><th className="p-3 border-b w-32 text-center">M.O./POD ($)</th><th className="p-3 border-b w-16 text-center"></th></tr></thead>
-            <tbody>{typs.map(t=><tr key={t.id} className="border-b hover:bg-slate-50">
+          <table className="w-full text-left border-collapse min-w-[480px]"><thead><tr className="bg-slate-100 text-sm text-slate-600"><th className="p-3 border-b w-10"></th><th className="p-3 border-b">Nombre</th><th className="p-3 border-b w-28 text-center">Cantidad</th><th className="p-3 border-b w-32 text-center">M.O./POD ($)</th><th className="p-3 border-b w-16 text-center"></th></tr></thead>
+            <tbody>{typs.map(t=><tr
+              key={t.id}
+              draggable
+              onDragStart={e=>{setDragId(t.id);e.dataTransfer.effectAllowed='move';}}
+              onDragEnd={()=>{setDragId(null);setOverId(null);}}
+              onDragOver={e=>{e.preventDefault();if(dragId&&dragId!==t.id&&overId!==t.id)setOverId(t.id);}}
+              onDragLeave={()=>{if(overId===t.id)setOverId(null);}}
+              onDrop={e=>{e.preventDefault();reorderTo(t.id);setDragId(null);setOverId(null);}}
+              className={`border-b hover:bg-slate-50 ${dragId===t.id?'opacity-40':''} ${overId===t.id?'border-t-2 border-t-blue-500 bg-blue-50/40':''}`}
+            >
+              <td className="p-2 text-center text-slate-300 hover:text-slate-500 select-none" style={{cursor:'grab'}} title="Arrastra para reordenar"><GripVertical size={16} className="inline"/></td>
               <td className="p-2"><input value={t.name} onChange={e=>updTyp(t.id,'name',e.target.value)} className="w-full p-2 border rounded-lg font-medium focus:ring-2 focus:ring-blue-500 outline-none"/></td>
               <td className="p-2"><input type="number" min="0" value={t.count} onChange={e=>updTyp(t.id,'count',Number(e.target.value))} className="w-full p-2 border rounded-lg text-center font-bold focus:ring-2 focus:ring-blue-500 outline-none"/></td>
               <td className="p-2"><input type="number" min="0" value={t.config.laborCostPerPod||0} onChange={e=>setTyps(p=>p.map(x=>x.id===t.id?{...x,config:{...x.config,laborCostPerPod:Number(e.target.value)}}:x))} className="w-full p-2 border rounded-lg text-center text-sm focus:ring-2 focus:ring-blue-500 outline-none"/></td>
