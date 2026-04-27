@@ -385,8 +385,8 @@ export default function App() {
       if(g.mode==='rect'){const tL=(Number(c.tileLength)||60)/100;const tW=(Number(c.tileWidth)||60)/100;ppP=Math.min(Math.ceil((Number(g.length)||0)/tL)*Math.ceil((Number(g.width)||0)/tW),Math.ceil((Number(g.length)||0)/tW)*Math.ceil((Number(g.width)||0)/tL));}
       else ppP=Math.ceil(efa/tA);
       const tpT=ppP*cnt;const yM2=Number(c.boxYieldM2)||1.44;const ppB=Math.round(yM2/tA)||1;const tbT=Math.ceil(tpT/ppB);const tmP=tbT*yM2;const am2=cnt>0?(tmP/cnt):0;
-      tm[typ.id]={floorArea:fa,perimeter:per,netWallArea:nwa,ceilingArea:ca,isClosed:closed,polyCoords:pc,piecesPerPod:ppP,piecesPerBox:ppB,totalBoxesTypology:tbT,totalM2PurchasedTypology:tmP,effectiveFloorArea:efa};
-      const labPP=Number(c.laborCostPerPod)||0;totL+=labPP*cnt;
+      tm[typ.id]={floorArea:fa,perimeter:per,netWallArea:nwa,ceilingArea:ca,isClosed:closed,polyCoords:pc,piecesPerPod:ppP,piecesPerBox:ppB,totalBoxesTypology:tbT,totalM2PurchasedTypology:tmP,effectiveFloorArea:efa,materialCostPerPod:0,laborCostPerPod:0,salePricePerPod:0};
+      const labPP=Number(c.laborCostPerPod)||0;totL+=labPP*cnt;tm[typ.id].laborCostPerPod=labPP;
       if(cnt>0){
         mats.forEach(mat=>{
           let tQ=0,w=mat.waste||0,isP=false,pQ=0;
@@ -494,6 +494,7 @@ export default function App() {
           if(isP&&!mat.draft){tQ=pQ;}
           const rQ=tQ*(1+w);
           bm[mat.id].theoreticalQty+=(tQ*cnt);bm[mat.id].realQty+=(rQ*cnt);
+          tm[typ.id].materialCostPerPod+=tQ*(Number(mat.cost)||0);
         });
       }
     });
@@ -514,6 +515,9 @@ export default function App() {
     bom.forEach(i=>{if(!byCat[i.category]){byCat[i.category]=[];costsCat[i.category]={materialCost:0,totalCost:0};}byCat[i.category].push(i);costsCat[i.category].materialCost+=i.materialCost;costsCat[i.category].totalCost+=i.totalCost;});
     const dc=totM+totL;const cg=dc*((Number(proj.contingencyPct)||0)/100);const cwc=dc+cg;
     const spt=cwc/(1-((Number(proj.marginPct)||0)/100));const spp=totP>0?spt/totP:0;
+    const typWeights=typs.map(t=>{const m=tm[t.id]||{};const cnt=Number(t.count)||0;return{id:t.id,cnt,weight:((m.materialCostPerPod||0)+(m.laborCostPerPod||0))*cnt};});
+    const sumW=typWeights.reduce((s,x)=>s+x.weight,0);
+    typWeights.forEach(x=>{if(!tm[x.id])return;tm[x.id].salePricePerPod=(sumW>0&&x.cnt>0)?(x.weight*spt)/(sumW*x.cnt):spp;});
     return{typMetrics:tm,totalPods:totP,bom,bomByCategory:byCat,costsByCategory:costsCat,totals:{material:totM,materialTheoretical:totMTheo,labor:totL,directCost:dc,contingency:cg,costWithContingency:cwc,grossMargin:spt-cwc,salePricePerPod:spp,salePriceTotal:spt}};
   },[typs,proj.contingencyPct,proj.marginPct,mats]);
   const ctx = useMemo(() => ({
