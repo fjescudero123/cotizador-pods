@@ -5,6 +5,6 @@ export const SUBLINES = {
   'REVESTIMIENTO DE MURO':[{v:'',l:'Insumo fijo (siempre)'},{v:'revRH125',l:'Plancha — Zona húmeda (RH)'},{v:'revRF125',l:'Plancha — Protección fuego (RF)'},{v:'revST125',l:'Plancha — Zona seca (ST 12.5)'},{v:'revST10',l:'Plancha — Shaft (ST 10)'},{v:'revFibro',l:'Plancha — Faldón tina (fibrocemento)'}],
   'CIELO':[{v:'',l:'Insumo fijo (siempre)'},{v:'yc',l:'Plancha Yeso Cartón Cielo (seleccionable)'}],
   'PUERTAS':[{v:'',l:'Insumo fijo (siempre)'},{v:'puerta',l:'Puerta (seleccionable)'},{v:'cerradura',l:'Cerradura (seleccionable)'}],
-  'ELECTRICO':[{v:'',l:'Insumo fijo (siempre)'},{v:'iluminacion',l:'Iluminación'}],
+  'ELECTRICO':[{v:'',l:'Insumo fijo (siempre)'},{v:'iluminacion',l:'Iluminación'},{v:'enchufes_interruptores',l:'Enchufes / Interruptores'}],
   'ACCESORIOS':[{v:'',l:'Insumo fijo (siempre)'},{v:'percha',l:'Percha'},{v:'portarollo',l:'Portarollo'},{v:'toallero',l:'Toallero'}],
 };

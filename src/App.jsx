@@ -391,7 +391,11 @@ export default function App() {
         mats.forEach(mat=>{
           let tQ=0,w=mat.waste||0,isP=false,pQ=0;
           if(mat.cat==='BASE'){const _bn=(mat.name||'').toUpperCase();if(mat.pres==='MT2'||mat.unit==='MT2'){pQ=fa;}else if(mat.id==='BASE-CUARZ'||_bn.includes('CUARZ')){pQ=fa/REND_CUARZ_M2_TINETA;}else if(mat.id==='BASE-MORTERO'||_bn.includes('MORTERO')){pQ=fa/REND_MORTERO_M2_SACO;}else{const floorRatio=fa/BASE_REF_AREA_PISO;pQ=mat.baseQty*floorRatio*(1+EST_MERMA);}isP=true;}
-          if(mat.cat==='ELECTRICO'){if(mat.slot){const ek={iluminacion:'elecIluminacion'}[mat.slot];if(ek&&c[ek]===mat.id){pQ=mat.baseQty;isP=true;}}else{pQ=mat.baseQty;isP=true;}}
+          if(mat.cat==='ELECTRICO'){
+            if(mat.slot==='iluminacion'){if(c.elecIluminacion===mat.id){pQ=mat.baseQty;isP=true;}}
+            else if(mat.slot==='enchufes_interruptores'){let eMap={};try{eMap=JSON.parse(c.elecEnchufesInt||'{}');}catch(e){}const q=Number(eMap[mat.id])||0;if(q>0){pQ=q;isP=true;}}
+            else if(!mat.slot){pQ=mat.baseQty;isP=true;}
+          }
           if(mat.cat==='SANITARIO AGUA POTABLE'){pQ=mat.baseQty;isP=true;}
           if(mat.cat==='SANITARIO ALCANTARILLADO'){pQ=mat.baseQty;isP=true;}
           if(mat.cat==='TERMINACION DE MURO'){

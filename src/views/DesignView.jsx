@@ -78,13 +78,18 @@ export default function DesignView({ ctx }) {
       case 'electrico': {
         const elecAll=mats.filter(m=>m.cat==='ELECTRICO'&&!m.draft);
         const elecFijos=elecAll.filter(m=>!m.slot);const elecIlum=elecAll.filter(m=>m.slot==='iluminacion');
+        const elecEnch=elecAll.filter(m=>m.slot==='enchufes_interruptores');
         const selIlum=elecAll.find(m=>m.id===c.elecIluminacion);
-        const et=elecFijos.reduce((s,m)=>s+(m.baseQty*m.cost),0)+(selIlum?selIlum.baseQty*selIlum.cost:0);
+        let enchMap={};try{enchMap=JSON.parse(c.elecEnchufesInt||'{}');}catch(e){}
+        const enchTot=elecEnch.reduce((s,m)=>{const q=Number(enchMap[m.id])||0;return s+q*m.cost;},0);
+        const updEnchQty=(matId,val)=>{const v=Math.max(0,Math.floor(Number(val)||0));const next={...enchMap};if(v>0)next[matId]=v;else delete next[matId];updConf(actTypId,{elecEnchufesInt:JSON.stringify(next)});};
+        const et=elecFijos.reduce((s,m)=>s+(m.baseQty*m.cost),0)+(selIlum?selIlum.baseQty*selIlum.cost:0)+enchTot;
         return(
         <div className="space-y-4"><div className="bg-slate-900 rounded-2xl border border-slate-700 overflow-hidden text-white">
-          <div className="p-4 border-b border-slate-700/50 flex justify-between items-center"><h4 className="font-bold text-blue-400 text-sm uppercase">Instalación Eléctrica</h4><span className="text-[10px] text-amber-400 bg-amber-900/50 px-2 py-1 rounded font-bold">Fijo + Iluminación</span></div>
+          <div className="p-4 border-b border-slate-700/50 flex justify-between items-center"><h4 className="font-bold text-blue-400 text-sm uppercase">Instalación Eléctrica</h4><span className="text-[10px] text-amber-400 bg-amber-900/50 px-2 py-1 rounded font-bold">Fijo + Iluminación + Enchufes</span></div>
           <div className="p-5 space-y-4">
             {elecIlum.length>0&&<div className="bg-slate-800/60 rounded-xl p-3 space-y-2"><label className="text-[10px] text-slate-400 uppercase font-bold">Iluminación</label><select className="w-full p-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-xs outline-none" value={c.elecIluminacion||''} onChange={e=>updConf(actTypId,{elecIluminacion:e.target.value})}><option value="">Sin iluminación seleccionada</option>{elecIlum.map(o=><option key={o.id} value={o.id}>{o.name} — {fmtC(o.cost)}</option>)}</select></div>}
+            {elecEnch.length>0&&<div className="bg-slate-800/60 rounded-xl p-3 space-y-2"><label className="text-[10px] text-slate-400 uppercase font-bold">Enchufes / Interruptores</label><div className="space-y-1.5">{elecEnch.map(m=>{const q=Number(enchMap[m.id])||0;return(<div key={m.id} className="flex items-center gap-2 text-[11px]"><span className="text-slate-300 flex-1 truncate">{m.name} <span className="text-slate-500">— {fmtC(m.cost)}</span></span><input type="number" min="0" step="1" value={q} onChange={e=>updEnchQty(m.id,e.target.value)} className="w-16 p-1 bg-slate-700 border border-slate-600 rounded text-white text-xs text-right outline-none"/><span className="text-slate-400 w-20 text-right shrink-0">{fmtC(q*m.cost)}</span></div>);})}</div></div>}
             <div className="bg-emerald-900/40 border border-emerald-500/30 rounded-xl p-4 flex justify-between items-center"><p className="text-xs text-emerald-300/70 uppercase font-bold">Total eléctrico por POD</p><div className="text-right"><p className="text-2xl font-black text-emerald-400">{fmtC(et)}</p><p className="text-xs text-emerald-300/60 mt-0.5">{fmtUF(et)}</p></div></div>
             {elecFijos.length>0&&<div className="bg-slate-800/50 rounded-xl overflow-hidden"><div className="p-3 border-b border-slate-700/50"><span className="text-[10px] text-slate-400 uppercase font-bold">Insumos fijos ({elecFijos.length})</span></div><div className="max-h-32 overflow-y-auto">{elecFijos.map(m=><div key={m.id} className="flex items-center justify-between px-3 py-1 border-b border-slate-700/30 text-[11px]"><span className="text-slate-300 flex-1 truncate mr-2">{m.name}</span><span className="text-white font-medium w-16 text-right shrink-0">{fmtC(m.baseQty*m.cost)}</span></div>)}</div></div>}
           </div>

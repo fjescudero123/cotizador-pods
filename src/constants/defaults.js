@@ -16,6 +16,7 @@ export const defConf = {
   artTina:'POD_121', artWCTanque:'POD_130', artWCTaza:'POD_131', artWCAsiento:'POD_132',
   artLavamanos:'POD_126', artPedestal:'POD_127', artGrifLav:'POD_135', artGrifTina:'POD_136', artExtractor:'POD_137', artMampara:'',
   elecIluminacion:'',
+  elecEnchufesInt:'{}',
   accPercha:'', accPortarollo:'', accToallero:'',
   puertaMat:'POD_144', cerraduraMat:'POD_145', puertaQty:1,
   laborCostPerPod:MO_COST_POD,
