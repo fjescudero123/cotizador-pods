@@ -527,8 +527,9 @@ export default function DesignView({ ctx }) {
         </div></div>);
       }
       case 'insumos': {
-        const gi=mats.filter(m=>m.cat==='INSUMOS GENERALES');const gt=gi.reduce((s,m)=>s+(m.baseQty*m.cost),0);
-        return <AutoStage title="Insumos Generales" badge="Fijo por POD" items={gi} total={gt} desc="Consumibles de fabricación: cintas, film stretch, rodillo púas, tarugos, adhesivo tapagoteras, spray marcado. Fijos por POD."/>;
+        const gi=mats.filter(m=>m.cat==='INSUMOS GENERALES'&&m.scope!=='proyecto');
+        const gt=gi.reduce((s,m)=>s+(m.baseQty*m.cost),0);
+        return <AutoStage title="Insumos Generales" badge="Fijo por POD" items={gi} total={gt} desc="Consumibles de fabricación: cintas, film stretch, tarugos, adhesivo tapagoteras, spray marcado. Fijos por POD. Los marcados como × Proyecto (ej: rodillo de púas) se costean una vez por proyecto y no aparecen aquí."/>;
       }
       default: return(
         <div className="flex flex-col items-center justify-center text-center p-8 border-2 border-dashed border-blue-200 rounded-xl bg-white">

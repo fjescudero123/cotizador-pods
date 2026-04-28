@@ -377,7 +377,7 @@ export default function App() {
   };
   const calc = useMemo(()=>{
     const tm={};let totL=0,totP=0;const bm={};
-    mats.forEach(m=>{bm[m.id]={key:m.id,name:m.name,brand:m.brand,category:m.cat,unit:m.unit,cost:m.cost,pres:m.pres||'Unidad',slot:m.slot||'',revRole:m.revRole||'',termGroup:m.termGroup||'',pisoGroup:m.pisoGroup||'',theoreticalQty:0,realQty:0,purchaseQty:0,materialCost:0,laborCost:0,totalCost:0,techSheetName:m.techSheetName,techSheetData:m.techSheetData};});
+    mats.forEach(m=>{bm[m.id]={key:m.id,name:m.name,brand:m.brand,category:m.cat,unit:m.unit,cost:m.cost,pres:m.pres||'Unidad',slot:m.slot||'',revRole:m.revRole||'',termGroup:m.termGroup||'',pisoGroup:m.pisoGroup||'',scope:m.scope||'pod',theoreticalQty:0,realQty:0,purchaseQty:0,materialCost:0,laborCost:0,totalCost:0,techSheetName:m.techSheetName,techSheetData:m.techSheetData};});
     typs.forEach(typ=>{
       const g=typ.geometry||defGeom;const c=typ.config||defConf;const cnt=Number(typ.count)||0;totP+=cnt;
       let fa=0,per=0,closed=true,pc=[{x:0,y:0}];
@@ -395,6 +395,7 @@ export default function App() {
       const labPP=Number(c.laborCostPerPod)||0;totL+=labPP*cnt;tm[typ.id].laborCostPerPod=labPP;
       if(cnt>0){
         mats.forEach(mat=>{
+          if(mat.scope==='proyecto')return;
           let tQ=0,w=mat.waste||0,isP=false,pQ=0;
           if(mat.cat==='BASE'){const _bn=(mat.name||'').toUpperCase();if(mat.pres==='MT2'||mat.unit==='MT2'){pQ=fa;}else if(mat.id==='BASE-CUARZ'||_bn.includes('CUARZ')){pQ=fa/REND_CUARZ_M2_TINETA;}else if(mat.id==='BASE-MORTERO'||_bn.includes('MORTERO')){pQ=fa/REND_MORTERO_M2_SACO;}else{const floorRatio=fa/BASE_REF_AREA_PISO;pQ=mat.baseQty*floorRatio*(1+EST_MERMA);}isP=true;}
           if(mat.cat==='ELECTRICO'){
@@ -504,6 +505,20 @@ export default function App() {
         });
       }
     });
+    // Segunda pasada: items con scope='proyecto' (1 unidad por proyecto completo, no por POD)
+    if(totP>0){
+      mats.forEach(mat=>{
+        if(mat.scope!=='proyecto'||mat.draft)return;
+        if(!bm[mat.id])return;
+        const tQ=Number(mat.baseQty)||0;
+        const wF=mat.waste||0;
+        bm[mat.id].theoreticalQty=tQ;
+        bm[mat.id].realQty=tQ*(1+wF);
+        // Amortizar costo por POD para que el pricing por tipologia refleje el item
+        const costPerPod=(tQ*(Number(mat.cost)||0))/totP;
+        Object.keys(tm).forEach(tid=>{if(tm[tid])tm[tid].materialCostPerPod+=costPerPod;});
+      });
+    }
     const isContinuous=(pres)=>{const p=(pres||'').toLowerCase();return p==='metro lineal'||p==='kg'||p==='mt2'||p==='m2';};
     let totM=0,totMTheo=0;
     Object.values(bm).forEach(item=>{
@@ -585,7 +600,7 @@ export default function App() {
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col" style={{animation:'scaleIn .2s ease'}}>
             <div className="flex justify-between items-center p-5 border-b bg-slate-50 rounded-t-2xl"><div><div className="flex items-center gap-2 text-blue-600 mb-1"><Layers size={20}/><span className="text-xs font-bold uppercase tracking-wider">{selCat}</span></div><p className="text-sm text-slate-500">{calc.bomByCategory[selCat].length} productos · {fmtC(calc.costsByCategory[selCat]?.totalCost||0)}</p></div><button onClick={()=>setSelCat(null)} className="text-slate-400 hover:text-slate-700 bg-slate-200 p-2 rounded-full"><X size={20}/></button></div>
             <div className="flex-1 overflow-y-auto p-6"><table className="w-full text-left border-collapse"><thead><tr className="bg-slate-100 text-slate-600 text-xs uppercase"><th className="p-3 border-b">ID</th><th className="p-3 border-b">Descripción</th><th className="p-3 border-b">Pres.</th><th className="p-3 border-b text-right">Cant. Compra</th><th className="p-3 border-b text-right">P.U.</th><th className="p-3 border-b text-right">Costo Total</th></tr></thead><tbody className="text-sm">
-              {calc.bomByCategory[selCat].map((it,idx)=>{const hasWaste=it.purchaseQty>it.realQty*1.01;return(<tr key={idx} className="border-b hover:bg-slate-50"><td className="p-3"><span className="font-mono text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded">{it.key}</span></td><td className="p-3 font-semibold text-slate-800">{it.name}</td><td className="p-3"><span className="text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">{it.pres}</span></td><td className="p-3 text-right"><span className="font-bold text-blue-600">{fmtN(it.purchaseQty)}</span>{hasWaste&&<span className="block text-[10px] text-slate-400">({fmtN(it.realQty)} teórico)</span>}</td><td className="p-3 text-right text-slate-500">{fmtC(it.cost)}</td><td className="p-3 text-right font-bold border-l text-slate-800">{fmtC(it.materialCost)}</td></tr>);})}
+              {calc.bomByCategory[selCat].map((it,idx)=>{const hasWaste=it.purchaseQty>it.realQty*1.01;return(<tr key={idx} className="border-b hover:bg-slate-50"><td className="p-3"><span className="font-mono text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded">{it.key}</span></td><td className="p-3 font-semibold text-slate-800"><span>{it.name}</span>{it.scope==='proyecto'&&<span className="ml-2 text-[9px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">× Proyecto</span>}</td><td className="p-3"><span className="text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">{it.pres}</span></td><td className="p-3 text-right"><span className="font-bold text-blue-600">{fmtN(it.purchaseQty)}</span>{hasWaste&&<span className="block text-[10px] text-slate-400">({fmtN(it.realQty)} teórico)</span>}</td><td className="p-3 text-right text-slate-500">{fmtC(it.cost)}</td><td className="p-3 text-right font-bold border-l text-slate-800">{fmtC(it.materialCost)}</td></tr>);})}
             </tbody></table></div>
           </div>
         </div>

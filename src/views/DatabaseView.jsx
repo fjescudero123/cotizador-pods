@@ -13,7 +13,7 @@ export default function DatabaseView({ ctx }) {
   const [showClear, setShowClear] = useState(false);
   const [showManual, setShowManual] = useState(false);
   const [editId, setEditId] = useState(null);
-  const [manItem, setManItem] = useState({code:'',cat:'',name:'',unit:'UNIDAD',cost:'',qty:'',pres:'',tsN:'',tsD:'',subline:''});
+  const [manItem, setManItem] = useState({code:'',cat:'',name:'',unit:'UNIDAD',cost:'',qty:'',pres:'',tsN:'',tsD:'',subline:'',scope:'pod'});
   const [delId, setDelId] = useState(null);
   const [swapFrom, setSwapFrom] = useState(null);
   const [matFilt, setMatFilt] = useState({code:'',cat:'',name:'',pres:''});
@@ -27,7 +27,7 @@ export default function DatabaseView({ ctx }) {
 
   const editClick = (m) => {
     setEditId(m.id);
-    setManItem({code:m.id,cat:m.cat,name:m.name,brand:m.brand||'',unit:m.unit||'UNIDAD',cost:m.cost,qty:m.baseQty,pres:m.pres||'',tsN:m.techSheetName||'',tsD:m.techSheetData||'',subline:m.termGroup||m.pisoGroup||m.slot||m.revRole||m.cieloGroup||''});
+    setManItem({code:m.id,cat:m.cat,name:m.name,brand:m.brand||'',unit:m.unit||'UNIDAD',cost:m.cost,qty:m.baseQty,pres:m.pres||'',tsN:m.techSheetName||'',tsD:m.techSheetData||'',subline:m.termGroup||m.pisoGroup||m.slot||m.revRole||m.cieloGroup||'',scope:m.scope||'pod'});
     setShowManual(true);
   };
 
@@ -41,11 +41,12 @@ export default function DatabaseView({ ctx }) {
     const fid = editId || (manItem.code?.trim() || `manual_${Date.now()}`);
     const sub = manItem.subline || '';
     const catU = manItem.cat.toUpperCase();
+    const scopeFinal = (catU==='INSUMOS GENERALES' && manItem.scope==='proyecto') ? 'proyecto' : 'pod';
     const it = {
       id: fid, cat: catU, name: manItem.name, brand: manItem.brand, unit: manItem.unit||'UNIDAD',
       cost: parseFloat(manItem.cost)||0, waste:0, laborY:0, laborC:0,
       baseQty: parseFloat(manItem.qty)||0, pres: manItem.pres||'Unidad',
-      techSheetName: manItem.tsN, techSheetData: manItem.tsD, draft: false,
+      techSheetName: manItem.tsN, techSheetData: manItem.tsD, draft: false, scope: scopeFinal,
       ...(catU==='TERMINACION DE MURO'&&sub?{termGroup:sub}:{}),
       ...(catU==='PISO'&&sub?{pisoGroup:sub}:{}),
       ...((catU==='SANITARIO ARTEFACTOS'||catU==='PUERTAS'||catU==='ACCESORIOS'||catU==='ELECTRICO')&&sub?{slot:sub}:{}),
@@ -53,7 +54,7 @@ export default function DatabaseView({ ctx }) {
       ...(catU==='CIELO'&&sub?{cieloGroup:sub}:{}),
     };
     saveMaterial(it, editId || null);
-    setManItem({code:'',cat:'',name:'',unit:'UNIDAD',cost:'',qty:'',pres:'',tsN:'',tsD:'',subline:''});
+    setManItem({code:'',cat:'',name:'',unit:'UNIDAD',cost:'',qty:'',pres:'',tsN:'',tsD:'',subline:'',scope:'pod'});
     setEditId(null);
     setShowManual(false);
   };
@@ -75,7 +76,7 @@ export default function DatabaseView({ ctx }) {
       <div className="max-w-6xl mx-auto" style={{animation:'slideUp .3s ease'}}>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 border-b pb-3 gap-3">
           <h2 className="text-2xl font-bold">Data Maestra</h2>
-          <button onClick={()=>{setEditId(null);setManItem({code:'',cat:'',name:'',unit:'UNIDAD',cost:'',qty:'',pres:'',tsN:'',tsD:'',subline:''});setShowManual(true);}} className="text-sm flex items-center gap-2 bg-slate-800 text-white px-4 py-2.5 rounded-xl hover:bg-slate-700 shadow-sm"><Plus size={16}/> Agregar</button>
+          <button onClick={()=>{setEditId(null);setManItem({code:'',cat:'',name:'',unit:'UNIDAD',cost:'',qty:'',pres:'',tsN:'',tsD:'',subline:'',scope:'pod'});setShowManual(true);}} className="text-sm flex items-center gap-2 bg-slate-800 text-white px-4 py-2.5 rounded-xl hover:bg-slate-700 shadow-sm"><Plus size={16}/> Agregar</button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
           <div className="bg-white p-6 rounded-2xl border border-blue-200 shadow-sm bg-blue-50/30 flex flex-col items-center text-center">
@@ -109,9 +110,9 @@ export default function DatabaseView({ ctx }) {
               :filtMats.map((m,i)=>{const stg=STAGES.find(s=>s.cat===m.cat);const stgIdx=STAGES.findIndex(s=>s.cat===m.cat);const bc=stgIdx>=0?badgeColors[stgIdx]:'bg-red-100 text-red-700';return(<tr key={m.id+'-'+i} className={`border-b hover:bg-slate-50 group/r ${m.draft?'opacity-50 bg-yellow-50':''}`}>
                 <td className="p-2 font-mono text-[10px] text-slate-400 truncate max-w-[70px]" title={m.id}>{m.id}</td>
                 <td className="p-2"><span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase leading-tight ${bc}`} title={m.catOriginal?`Original: ${m.catOriginal}`:''}>{stg?stg.label.substring(3):m.cat}</span></td>
-                <td className="p-2"><div className="flex items-center gap-2"><span className="font-medium text-slate-800 text-xs">{m.name}</span>{m.draft&&<span className="bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded text-[10px] font-bold shrink-0">BORRADOR</span>}{m.techSheetData?<a href={m.techSheetData} download={m.techSheetName} className="inline-flex items-center gap-1 text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded text-[10px] hover:bg-blue-100 shrink-0"><FileText size={10}/> Ficha</a>:<label className="cursor-pointer text-slate-300 hover:text-blue-500 opacity-0 group-hover/r:opacity-100 shrink-0"><Paperclip size={12}/><input type="file" accept=".pdf,image/*,.doc,.docx" className="hidden" onChange={e=>directTS(e,m.id)}/></label>}</div></td>
+                <td className="p-2"><div className="flex items-center gap-2"><span className="font-medium text-slate-800 text-xs">{m.name}</span>{m.scope==='proyecto'&&<span className="bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded text-[10px] font-bold shrink-0 uppercase tracking-wider" title="Se compra una vez por proyecto, no escala por POD">× Proyecto</span>}{m.draft&&<span className="bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded text-[10px] font-bold shrink-0">BORRADOR</span>}{m.techSheetData?<a href={m.techSheetData} download={m.techSheetName} className="inline-flex items-center gap-1 text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded text-[10px] hover:bg-blue-100 shrink-0"><FileText size={10}/> Ficha</a>:<label className="cursor-pointer text-slate-300 hover:text-blue-500 opacity-0 group-hover/r:opacity-100 shrink-0"><Paperclip size={12}/><input type="file" accept=".pdf,image/*,.doc,.docx" className="hidden" onChange={e=>directTS(e,m.id)}/></label>}</div></td>
                 <td className="p-2"><span className="text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">{m.pres||'-'}</span></td>
-                <td className="p-2 text-right font-medium text-blue-600 text-xs">{m.baseQty} <span className="text-slate-400 text-[10px]">{m.unit}</span></td>
+                <td className="p-2 text-right font-medium text-blue-600 text-xs">{m.baseQty} <span className="text-slate-400 text-[10px]">{m.unit}{m.scope==='proyecto'?' /proy':''}</span></td>
                 <td className="p-2 text-right text-xs">{fmtC(m.cost)}</td>
                 <td className="p-2 text-center"><div className="flex justify-center gap-1">{m.draft&&<button onClick={()=>activateMaterial(m.id)} className="text-green-600 hover:text-green-800 bg-green-50 hover:bg-green-100 p-1.5 rounded-lg transition" title="Activar (incluir en cálculo)"><CheckCircle2 size={13}/></button>}{m.draft&&<button onClick={()=>setSwapFrom(m.id)} className="text-amber-600 hover:text-amber-800 bg-amber-50 hover:bg-amber-100 p-1.5 rounded-lg transition" title="Reemplazar un ítem activo"><RefreshCw size={13}/></button>}<button onClick={()=>editClick(m)} className="text-blue-500 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 p-1.5 rounded-lg transition" title="Editar / Reclasificar"><Edit2 size={13}/></button><button onClick={()=>setDelId(m.id)} className="text-red-400 hover:text-red-600 bg-red-50 hover:bg-red-100 p-1.5 rounded-lg transition" title="Eliminar"><Trash2 size={13}/></button></div></td>
               </tr>);})}
@@ -167,9 +168,18 @@ export default function DatabaseView({ ctx }) {
               </div>
               <div className="grid grid-cols-3 gap-4">
                 <div><label className="block text-xs font-medium text-slate-500 mb-1">Costo Unit. *</label><input type="number" className="w-full p-2.5 border rounded-xl outline-none text-sm" value={manItem.cost} onChange={e=>setManItem({...manItem,cost:e.target.value})}/></div>
-                <div><label className="block text-xs font-medium text-slate-500 mb-1">Cant./POD *</label><input type="number" step="0.01" className="w-full p-2.5 border rounded-xl outline-none text-sm" value={manItem.qty} onChange={e=>setManItem({...manItem,qty:e.target.value})}/></div>
+                <div><label className="block text-xs font-medium text-slate-500 mb-1">{manItem.cat==='INSUMOS GENERALES'&&manItem.scope==='proyecto'?'Cant./Proyecto *':'Cant./POD *'}</label><input type="number" step="0.01" className="w-full p-2.5 border rounded-xl outline-none text-sm" value={manItem.qty} onChange={e=>setManItem({...manItem,qty:e.target.value})}/></div>
                 <div><label className="block text-xs font-medium text-slate-500 mb-1">Presentación</label><input className="w-full p-2.5 border rounded-xl outline-none text-sm" placeholder="Ej: Saco 25kg" value={manItem.pres} onChange={e=>setManItem({...manItem,pres:e.target.value})}/></div>
               </div>
+              {manItem.cat==='INSUMOS GENERALES'&&(
+                <label className="flex items-start gap-3 p-3 bg-amber-50 border border-amber-200 rounded-xl cursor-pointer hover:bg-amber-100 transition">
+                  <input type="checkbox" checked={manItem.scope==='proyecto'} onChange={e=>setManItem({...manItem,scope:e.target.checked?'proyecto':'pod'})} className="mt-0.5 w-4 h-4 accent-amber-600 cursor-pointer"/>
+                  <div className="text-xs">
+                    <div className="font-semibold text-amber-800">Una vez por proyecto (no escala por POD)</div>
+                    <div className="text-amber-700 mt-0.5">Marca cuando el insumo se compra una sola vez para todo el proyecto (ej: rodillo de púas, herramienta). La cantidad ingresada arriba se usa tal cual, sin multiplicar por cantidad de pods.</div>
+                  </div>
+                </label>
+              )}
               <div className="pt-4 border-t">
                 <label className="block text-xs font-semibold mb-2">Ficha Técnica (Max 2MB)</label>
                 {manItem.tsN?<div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-100 rounded-xl"><div className="flex items-center gap-2 overflow-hidden"><FileText size={18} className="text-blue-500 shrink-0"/><span className="text-sm font-medium text-blue-700 truncate">{manItem.tsN}</span></div><button onClick={()=>setManItem(p=>({...p,tsN:'',tsD:''}))} className="p-1.5 text-red-500 hover:bg-red-100 rounded-lg"><Trash2 size={16}/></button></div>
