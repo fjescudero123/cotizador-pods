@@ -444,23 +444,49 @@ export function diffPaths(oldObj, newObj, prefix = '') {
   return changes;
 }
 
-// Escribe campos específicos de un typ usando dot-notation (merge per-path nativo de Firestore).
+// Convierte un objeto plano con dot-notation paths a un objeto nested.
+// Ej: {'config.artMampara':'X', name:'Y'} → {config:{artMampara:'X'}, name:'Y'}.
+// Necesario porque setDoc(merge:true) NO interpreta keys con dots como nested paths
+// — los trata como nombres de campo literales (creando campos con dots en el nombre).
+// setDoc con objetos nested SÍ hace deep merge (preserva campos hermanos).
+function pathsToNested(paths) {
+  const result = {};
+  for (const [path, value] of Object.entries(paths)) {
+    const parts = path.split('.');
+    if (parts.length === 1) {
+      result[path] = value;
+      continue;
+    }
+    let cur = result;
+    for (let i = 0; i < parts.length - 1; i++) {
+      const k = parts[i];
+      if (typeof cur[k] !== 'object' || cur[k] === null || Array.isArray(cur[k])) cur[k] = {};
+      cur = cur[k];
+    }
+    cur[parts[parts.length - 1]] = value;
+  }
+  return result;
+}
+
+// Escribe campos específicos de un typ con deep merge nativo de Firestore.
 // Permite que dos PCs editando campos distintos del mismo typ no se pisen.
 export async function saveTypFields(projectId, typId, fields) {
   if (!projectId || !typId || !fields || Object.keys(fields).length === 0) return;
-  const payload = { ...fields, updatedAt: serverTimestamp() };
+  const nested = pathsToNested(fields);
+  nested.updatedAt = serverTimestamp();
   await setDoc(
     doc(db, COL_POD_PROJECTS, projectId, SUB_TYPS, typId),
-    payload,
+    nested,
     { merge: true }
   );
 }
 
-// Escribe campos específicos del doc principal del proyecto (dot-notation merge).
+// Escribe campos específicos del doc principal del proyecto.
 export async function saveProjectFields(projectId, fields) {
   if (!projectId || !fields || Object.keys(fields).length === 0) return;
-  const payload = { ...fields, updatedAt: serverTimestamp() };
-  await setDoc(doc(db, COL_POD_PROJECTS, projectId), payload, { merge: true });
+  const nested = pathsToNested(fields);
+  nested.updatedAt = serverTimestamp();
+  await setDoc(doc(db, COL_POD_PROJECTS, projectId), nested, { merge: true });
 }
 
 export async function saveTypsBatch(projectId, typs) {
