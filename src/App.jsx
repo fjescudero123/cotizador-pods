@@ -1,22 +1,34 @@
 // @ts-nocheck
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Calculator, Database, FolderOpen, Layers, LayoutDashboard, LayoutGrid, Menu, X } from 'lucide-react';
 import { REND_ADHESIVO_M2_SACO, REND_FRAGUE_M2_SACO, REND_ESPACIADOR_M2_BOLSA, REND_ESQUINERO_ML_TIRA, REND_PASTA_M2_SACO, REND_LATEX_M2_TINETA, REND_ESMALTE_M2_TINETA, REND_CUARZ_M2_TINETA, REND_MORTERO_M2_SACO, EST_REF_AREA_NETA, EST_MERMA, BASE_REF_AREA_PISO } from './constants/economics.js';
 import { getUF, useUFValue, initUF } from './state/ufStore.js';
 import { defGeom, defConf, defTyp } from './constants/defaults.js';
 import { classifyToStage } from './utils/classify.js';
 import { fmtC, fmtN } from './utils/format.js';
+import { isReceptaculoMat } from './utils/sanitarios.js';
 import { DEMO_MATS } from './constants/demoMats.js';
 import { MAYU_LOGO_SVG } from './components/ui/MayuLogo.jsx';
 import { Notify } from './components/ui/Notify.jsx';
 import { useNotification } from '@mayu/hooks';
 import { db, ensureAuth } from './firebase.js';
-import { doc, getDoc, deleteDoc, getDocs, setDoc, collection, query, orderBy, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, deleteDoc, getDocs, collection, query, orderBy } from 'firebase/firestore';
 import {
   onMaterialsChange,
   saveMaterial as fsSaveMaterial,
   saveMaterialsBatch as fsSaveMaterialsBatch,
   deleteMaterial as fsDeleteMaterial,
+  subscribeProject,
+  loadProjectFull,
+  saveProjectMain,
+  saveTyp as fsSaveTyp,
+  saveTypsBatch as fsSaveTypsBatch,
+  saveTypFields as fsSaveTypFields,
+  saveProjectFields as fsSaveProjectFields,
+  deleteTypDoc as fsDeleteTypDoc,
+  deleteProjectFull,
+  duplicateProjectFull,
+  diffPaths,
 } from './firestoreService.js';
 import ProjectView from './views/ProjectView.jsx';
 import BomView from './views/BomView.jsx';
@@ -73,9 +85,16 @@ export default function App() {
   const [notif, nfy, dismissNotif] = useNotification(4000);
   const [mobMenu,setMobMenu] = useState(false);
   const [mats,setMats] = useState([]);
-  const [proj,setProj] = useState(()=>{try{const s=localStorage.getItem('mayu_proj');return s?JSON.parse(s):{name:'Cotización B2B',client:'',clientRut:'',clientAddress:'',clientPhone:'',clientEmail:'',contactName:'',marginPct:20,contingencyPct:5};}catch(e){return{name:'Cotización B2B',client:'',clientRut:'',clientAddress:'',clientPhone:'',clientEmail:'',contactName:'',marginPct:20,contingencyPct:5};}});
+  const defaultProj = {name:'Cotización B2B',client:'',clientRut:'',clientAddress:'',clientPhone:'',clientEmail:'',contactName:'',marginPct:20,contingencyPct:5};
+  // Cache de primer paint: hidrata UI inmediato. El listener pisa con la versión de Firestore apenas llega.
+  const [proj,setProj] = useState(()=>{try{const s=localStorage.getItem('mayu_proj');return s?JSON.parse(s):defaultProj;}catch(e){return defaultProj;}});
   const [typs,setTyps] = useState(()=>{try{const s=localStorage.getItem('mayu_typs');return s?JSON.parse(s):[defTyp];}catch(e){return[defTyp];}});
   const [actTypId,setActTypId] = useState(typs[0]?.id);
+  // Anti-loop: huellas del estado que coincide con Firestore (server-confirmed).
+  // Si un cambio local da el mismo hash, no se reescribe. Si un snapshot remoto
+  // da el mismo hash que tenemos local, no se rehidrata.
+  const lastSyncedProjRef = useRef('');
+  const lastSyncedTypsRef = useRef('');
   const { crmProjects, crmLoading } = useCRMProjects();
   const actTyp = useMemo(()=>typs.find(t=>t.id===actTypId)||typs[0]||defTyp,[typs,actTypId]);
   // Suscripcion realtime a pod_materials (data maestra compartida entre usuarios).
@@ -108,8 +127,161 @@ export default function App() {
     });
     return () => unsub();
   },[]);
-  useEffect(()=>{localStorage.setItem('mayu_proj',JSON.stringify(proj));},[proj]);
-  useEffect(()=>{localStorage.setItem('mayu_typs',JSON.stringify(typs));},[typs]);
+  // Cache LS para primer paint (no es fuente de verdad — se pisa con snapshot remoto).
+  useEffect(()=>{try{localStorage.setItem('mayu_proj',JSON.stringify(proj));}catch{}},[proj]);
+  useEffect(()=>{try{localStorage.setItem('mayu_typs',JSON.stringify(typs));}catch{}},[typs]);
+
+  // ─── Listener realtime al proyecto activo ─────────────────────────────────
+  // Suscripción a pod_projects/{projectId} + subcolección typs. Cualquier cambio
+  // en otro PC se refleja acá inmediatamente. hasPendingWrites se usa para
+  // ignorar nuestros propios writes mientras están en vuelo.
+  useEffect(() => {
+    if (!projectId) {
+      lastSyncedProjRef.current = '';
+      lastSyncedTypsRef.current = '';
+      return;
+    }
+    let cancelled = false;
+    let firstHydrated = false;
+
+    // Hidratación inicial vía getDoc + getDocs (más rápida que esperar al primer onSnapshot
+    // y dispara la migración legacy si typs vienen embebidos).
+    (async () => {
+      try {
+        await ensureAuth();
+        const data = await loadProjectFull(projectId);
+        if (cancelled) return;
+        if (!data) {
+          // Proyecto borrado o sin permiso — limpiar projectId.
+          nfy('El proyecto ya no existe en la nube.', 'error');
+          setProjectId(null);
+          return;
+        }
+        const remoteProj = data.proj || defaultProj;
+        const remoteTyps = (data.typs && data.typs.length) ? data.typs : [defTyp];
+        const projHash = JSON.stringify(remoteProj);
+        const typsHash = JSON.stringify(remoteTyps);
+        if (projHash !== JSON.stringify(proj)) setProj(remoteProj);
+        lastSyncedProjRef.current = projHash;
+        if (typsHash !== JSON.stringify(typs)) {
+          setTyps(remoteTyps);
+          if (!remoteTyps.find(t => t.id === actTypId)) setActTypId(remoteTyps[0]?.id || null);
+        }
+        lastSyncedTypsRef.current = typsHash;
+        firstHydrated = true;
+      } catch (e) {
+        console.warn('[loadProjectFull]', e);
+      }
+    })();
+
+    const unsub = subscribeProject(projectId, ({ proj: remoteProj, typs: remoteTyps, hasPendingWrites, exists }) => {
+      if (cancelled) return;
+      if (!exists) {
+        nfy('El proyecto ya no existe en la nube.', 'error');
+        setProjectId(null);
+        return;
+      }
+      // Ignorar snapshots originados por nuestros propios writes locales (aún no confirmados por server).
+      if (hasPendingWrites) return;
+      if (!firstHydrated) return; // dejar que getDoc inicial gane el primer paint
+
+      if (remoteProj) {
+        const projHash = JSON.stringify(remoteProj);
+        if (projHash !== lastSyncedProjRef.current) {
+          lastSyncedProjRef.current = projHash;
+          setProj(remoteProj);
+        }
+      }
+      if (Array.isArray(remoteTyps) && remoteTyps.length > 0) {
+        const typsHash = JSON.stringify(remoteTyps);
+        if (typsHash !== lastSyncedTypsRef.current) {
+          lastSyncedTypsRef.current = typsHash;
+          setTyps(remoteTyps);
+          if (!remoteTyps.find(t => t.id === actTypId)) setActTypId(remoteTyps[0]?.id || null);
+        }
+      }
+    });
+
+    return () => { cancelled = true; unsub(); };
+  }, [projectId]);
+
+  // ─── Auto-save granular: doc principal cuando cambia proj (dot-notation) ──
+  // Solo escribe los paths que difieren respecto al server-confirmed (lastSyncedProjRef).
+  // Ej: si solo cambia proj.client, manda {'proj.client': 'X', name: oldName si cambió}.
+  // Esto permite que dos PCs editando campos distintos del proj no se pisen.
+  useEffect(() => {
+    if (!projectId) return;
+    const projHash = JSON.stringify(proj);
+    if (projHash === lastSyncedProjRef.current) return;
+    setSaveStatus('dirty');
+    const timer = setTimeout(async () => {
+      setSaveStatus('saving');
+      try {
+        await ensureAuth();
+        let prevProj = {};
+        try { prevProj = JSON.parse(lastSyncedProjRef.current || '{}'); } catch {}
+        const changes = diffPaths(prevProj, proj);
+        if (Object.keys(changes).length === 0) {
+          lastSyncedProjRef.current = projHash;
+          setSaveStatus('saved');
+          return;
+        }
+        const writes = {};
+        for (const [k, v] of Object.entries(changes)) writes[`proj.${k}`] = v;
+        if ('name' in changes) writes.name = changes.name; // top-level espejado para listados/queries
+        await fsSaveProjectFields(projectId, writes);
+        lastSyncedProjRef.current = projHash;
+        setSaveStatus('saved');
+      } catch (e) { console.warn('[autoSaveProj]', e); setSaveStatus('error'); }
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [proj, projectId]);
+
+  // ─── Auto-save granular: subcolección typs (dot-notation por sub-campo) ───
+  // Para typs nuevos: escribe entero. Para modificados: solo los paths que difieren.
+  // Esto permite que dos PCs editando, ej. config.artTina vs geometry.height del MISMO typ,
+  // no se pisen — Firestore mergea cada path por separado.
+  useEffect(() => {
+    if (!projectId) return;
+    const typsHash = JSON.stringify(typs);
+    if (typsHash === lastSyncedTypsRef.current) return;
+    setSaveStatus('dirty');
+    const timer = setTimeout(async () => {
+      setSaveStatus('saving');
+      try {
+        await ensureAuth();
+        let prevTyps = [];
+        try { prevTyps = JSON.parse(lastSyncedTypsRef.current || '[]'); } catch {}
+        const prevById = new Map(prevTyps.map(t => [t.id, t]));
+        const prevIdxById = new Map(prevTyps.map((t, i) => [t.id, i]));
+        const nowIds = new Set(typs.map(t => t.id));
+        const deletions = prevTyps.filter(t => !nowIds.has(t.id));
+        const writes = [];
+        typs.forEach((t, i) => {
+          const prev = prevById.get(t.id);
+          if (!prev) {
+            // Typ nuevo: escribir doc completo con order.
+            writes.push(fsSaveTyp(projectId, t, i));
+            return;
+          }
+          // Typ existente: diff path por path.
+          const changes = diffPaths(prev, t);
+          // Reordering: detectar si la posición cambió y propagar el order.
+          const prevIdx = prevIdxById.get(t.id);
+          if (prevIdx !== i) changes.order = i;
+          if (Object.keys(changes).length === 0) return;
+          writes.push(fsSaveTypFields(projectId, t.id, changes));
+        });
+        await Promise.all([
+          ...deletions.map(d => fsDeleteTypDoc(projectId, d.id).catch(e => console.warn('[delTyp]', e))),
+          ...writes.map(p => p.catch(e => console.warn('[saveTyp]', e))),
+        ]);
+        lastSyncedTypsRef.current = typsHash;
+        setSaveStatus('saved');
+      } catch (e) { console.warn('[autoSaveTyps]', e); setSaveStatus('error'); }
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [typs, projectId]);
   // Auto-heal refs rotas a mats que no existen (ej. defaults legacy POD_142 que ya no están en DB).
   useEffect(()=>{
     if(mats.length===0)return;
@@ -262,8 +434,15 @@ export default function App() {
     setMats(p=>p.map(m=>m.id===matId?next:m));
     await fsSaveMaterial(next);
   };
-  // Borra solo el estado personal (proyecto/tipologías locales). La data maestra es compartida y no se toca.
-  const clearAll=()=>{localStorage.removeItem('mayu_proj');localStorage.removeItem('mayu_typs');setProj({name:'Nuevo Proyecto',client:'',clientRut:'',clientAddress:'',clientPhone:'',clientEmail:'',contactName:'',marginPct:20,contingencyPct:5});const nid=`typ-${Date.now()}`;setTyps([{...defTyp,id:nid}]);setActTypId(nid);setProjectId(null);nfy("Proyecto local reiniciado.");};
+  // Borra solo el estado personal (cache local). La data maestra y los proyectos guardados en Firestore no se tocan.
+  const clearAll=()=>{
+    try{localStorage.removeItem('mayu_proj');localStorage.removeItem('mayu_typs');}catch{}
+    lastSyncedProjRef.current = '';
+    lastSyncedTypsRef.current = '';
+    setProj({name:'Nuevo Proyecto',client:'',clientRut:'',clientAddress:'',clientPhone:'',clientEmail:'',contactName:'',marginPct:20,contingencyPct:5});
+    const nid=`typ-${Date.now()}`;setTyps([{...defTyp,id:nid}]);setActTypId(nid);setProjectId(null);
+    nfy("Proyecto local reiniciado.");
+  };
 
   // ─── Project persistence (Firestore pod_projects) ────────────────────────────
   const loadProjectsList = async () => {
@@ -283,18 +462,22 @@ export default function App() {
     try {
       await ensureAuth();
       const isNew = !projectId || saveAsName;
-      const docRef = isNew ? doc(collection(db, 'pod_projects')) : doc(db, 'pod_projects', projectId);
       const projToSave = saveAsName ? { ...proj, name: saveAsName } : proj;
-      const payload = {
-        name: projToSave.name,
-        proj: projToSave,
-        typs,
-        updatedAt: serverTimestamp(),
+      const newId = await saveProjectMain(isNew ? null : projectId, projToSave, {
+        isNew,
         createdBy: authUser?.username || 'unknown',
-        ...(isNew ? { createdAt: serverTimestamp() } : {}),
-      };
-      await setDoc(docRef, payload, { merge: !isNew });
-      if (isNew) { setProjectId(docRef.id); if (saveAsName) setProj(projToSave); }
+      });
+      if (isNew) {
+        // Inicializar typs en subcolección. Si vienen typs en estado, escribirlos al nuevo doc.
+        if (typs && typs.length) await fsSaveTypsBatch(newId, typs);
+        setProjectId(newId);
+        if (saveAsName) setProj(projToSave);
+        // Sembrar refs para que el auto-save no re-escriba inmediatamente.
+        lastSyncedProjRef.current = JSON.stringify(projToSave);
+        lastSyncedTypsRef.current = JSON.stringify(typs);
+      } else {
+        lastSyncedProjRef.current = JSON.stringify(projToSave);
+      }
       setSaveStatus('saved');
       nfy(isNew ? 'Proyecto guardado.' : 'Proyecto actualizado.');
     } catch (e) {
@@ -302,61 +485,76 @@ export default function App() {
       console.warn('[saveProject]', e);
     } finally { setBusy(false); }
   };
-  const loadProject = (saved) => {
-    setProj(saved.proj);
-    setTyps(saved.typs);
-    setActTypId(saved.typs[0]?.id || null);
-    setProjectId(saved._id);
+  const loadProject = async (saved) => {
+    // Si saved no trae typs (vino de la lista), traerlos completos vía loadProjectFull.
+    let full = saved;
+    if (!Array.isArray(saved.typs) || saved.typs.length === 0) {
+      try {
+        const fetched = await loadProjectFull(saved._id);
+        if (fetched) full = fetched;
+      } catch (e) { console.warn('[loadProject]', e); }
+    }
+    const remoteProj = full.proj || defaultProj;
+    const remoteTyps = (full.typs && full.typs.length) ? full.typs : [defTyp];
+    // Sembrar refs ANTES de setState para que los useEffects de auto-save no re-escriban.
+    lastSyncedProjRef.current = JSON.stringify(remoteProj);
+    lastSyncedTypsRef.current = JSON.stringify(remoteTyps);
+    setProj(remoteProj);
+    setTyps(remoteTyps);
+    setActTypId(remoteTyps[0]?.id || null);
+    setProjectId(full._id);
     setTab('project');
-    nfy('Proyecto cargado: ' + saved.name);
+    nfy('Proyecto cargado: ' + (full.name || full.proj?.name || ''));
   };
-  const duplicateProject = (saved) => {
-    setProj({ ...saved.proj, name: saved.proj.name + ' (copia)' });
-    setTyps(saved.typs.map(t => ({ ...t, id: `typ-${Date.now()}-${Math.random().toString(36).slice(2,6)}` })));
-    setActTypId(null);
-    setProjectId(null);
-    setTab('project');
-    nfy('Proyecto duplicado. Modifica el nombre y guarda.');
+  const duplicateProject = async (saved) => {
+    setBusy(true);
+    try {
+      await ensureAuth();
+      const newName = (saved.proj?.name || saved.name || '') + ' (copia)';
+      const dup = await duplicateProjectFull(saved._id, newName);
+      // Cargar el nuevo proyecto en la UI (queda guardado en Firestore con typs en subcolección).
+      lastSyncedProjRef.current = JSON.stringify(dup.proj);
+      lastSyncedTypsRef.current = JSON.stringify(dup.typs);
+      setProj(dup.proj);
+      setTyps(dup.typs);
+      setActTypId(dup.typs[0]?.id || null);
+      setProjectId(dup._id);
+      setTab('project');
+      nfy('Proyecto duplicado: ' + newName);
+    } catch (e) {
+      nfy('Error duplicando proyecto.', 'error');
+      console.warn('[duplicateProject]', e);
+    } finally { setBusy(false); }
   };
   const newProject = () => {
     if (projectId && !window.confirm('¿Crear un proyecto nuevo? Los cambios no guardados se perderán.')) return;
     const nid = `typ-${Date.now()}`;
-    setProj({ name: 'Nuevo Proyecto', client: '', clientRut: '', clientAddress: '', clientPhone: '', clientEmail: '', contactName: '', marginPct: 20, contingencyPct: 5 });
-    setTyps([{ ...defTyp, id: nid }]);
+    const blank = { name: 'Nuevo Proyecto', client: '', clientRut: '', clientAddress: '', clientPhone: '', clientEmail: '', contactName: '', marginPct: 20, contingencyPct: 5 };
+    const blankTyps = [{ ...defTyp, id: nid }];
+    // Sin projectId, no hay auto-save: el usuario debe llamar saveProject() para persistir.
+    lastSyncedProjRef.current = '';
+    lastSyncedTypsRef.current = '';
+    setProj(blank);
+    setTyps(blankTyps);
     setActTypId(nid);
     setProjectId(null);
     setTab('project');
-    nfy('Nuevo proyecto creado.');
+    nfy('Nuevo proyecto creado. Guarda para sincronizar a la nube.');
   };
   const deleteProject = async (docId) => {
     if (!window.confirm('¿Eliminar este proyecto permanentemente?')) return;
     setBusy(true);
     try {
       await ensureAuth();
-      await deleteDoc(doc(db, 'pod_projects', docId));
+      await deleteProjectFull(docId);
       setProjectsList(p => p.filter(x => x._id !== docId));
       if (projectId === docId) { setProjectId(null); }
       nfy('Proyecto eliminado.');
     } catch (e) {
       nfy('Error eliminando proyecto.', 'error');
+      console.warn('[deleteProject]', e);
     } finally { setBusy(false); }
   };
-  // Auto-save to Firestore (debounced 1.5s, only when project is loaded).
-  // Dispara tambien tras un reload: al rehidratar projectId desde localStorage,
-  // proj/typs vienen del ultimo estado local y se guardan como seguro.
-  useEffect(() => {
-    if (!projectId) return;
-    setSaveStatus('dirty');
-    const timer = setTimeout(async () => {
-      setSaveStatus('saving');
-      try {
-        await ensureAuth();
-        await setDoc(doc(db, 'pod_projects', projectId), { name: proj.name, proj, typs, updatedAt: serverTimestamp() }, { merge: true });
-        setSaveStatus('saved');
-      } catch (e) { console.warn('[autoSave]', e); setSaveStatus('error'); }
-    }, 1500);
-    return () => clearTimeout(timer);
-  }, [proj, typs, projectId]);
 
   const exportXls=async()=>{
     setBusy(true);
@@ -417,7 +615,7 @@ export default function App() {
               if(tw.type==='ceramica'){ceramArea+=wA;if(tw.mat)ceramAreaByMat[tw.mat]=(ceramAreaByMat[tw.mat]||0)+wA;}
               if(tw.type==='pintura'){pintArea+=wA;if(tw.paint){const pm=mats.find(x=>x.id===tw.paint);if(pm?.termGroup==='pintura_latex'){latexArea+=wA;latexCoats=tw.coats||2;}else if(pm?.termGroup==='pintura_esmalte'){esmalteArea+=wA;esmalteCoats=tw.coats||2;}}}});
               // Faldón solo suma área si hay una tina real seleccionada.
-              const _hasTinaReal=c.artTina&&mats.some(m=>m.id===c.artTina&&!/RECEPT/i.test(m.name||''));
+              const _hasTinaReal=c.artTina&&mats.some(m=>m.id===c.artTina&&!isReceptaculoMat(m));
               if(_hasTinaReal && c.termFaldon==='ceramica'){ceramArea+=0.6;if(c.termFaldonMat)ceramAreaByMat[c.termFaldonMat]=(ceramAreaByMat[c.termFaldonMat]||0)+0.6;}
               if(_hasTinaReal && c.termFaldon==='pintura')pintArea+=0.6;
               // Cielo pintado: suma el area del cielo a pasta+latex/esmalte segun el material seleccionado.
@@ -484,7 +682,7 @@ export default function App() {
               const isTinaOnly=/SOPORTE.*TINA|TINA.*SOPORTE/i.test(mat.name||'');
               if(isTinaOnly){
                 const selTinaMat=mats.find(x=>x.id===c.artTina);
-                const realTina=!!selTinaMat && !/RECEPT/i.test(selTinaMat.name||'');
+                const realTina=!!selTinaMat && !isReceptaculoMat(selTinaMat);
                 if(realTina){pQ=mat.baseQty;isP=true;}
               } else {pQ=mat.baseQty;isP=true;}
             }

@@ -19,6 +19,8 @@ const COL_MATERIALS = 'pod_materials';
 const COL_QUOTES = 'pod_quotes';
 const COL_CONFIG = 'pod_config';
 const COL_CRM_PROJECTS = 'projects';
+const COL_POD_PROJECTS = 'pod_projects';
+const SUB_TYPS = 'typs';
 
 const LS_MATERIALS = 'mayu_materialsDb';
 const LS_CONFIG = 'mayu_pod_config';
@@ -278,8 +280,10 @@ export function onCRMProjectsChange(callback) {
 //  PROYECTO + TIPOLOGÍAS — localStorage
 // ═══════════════════════════════════════════════════════
 
+// localStorage helpers — usados solo como cache de primer paint.
+// La fuente de verdad es siempre Firestore via subscribeProject().
 export function saveProjectLocal(proj) {
-  localStorage.setItem('mayu_proj', JSON.stringify(proj));
+  try { localStorage.setItem('mayu_proj', JSON.stringify(proj)); } catch (e) {}
 }
 
 export function loadProjectLocal() {
@@ -292,7 +296,7 @@ export function loadProjectLocal() {
 }
 
 export function saveTypologiesLocal(typs) {
-  localStorage.setItem('mayu_typs', JSON.stringify(typs));
+  try { localStorage.setItem('mayu_typs', JSON.stringify(typs)); } catch (e) {}
 }
 
 export function loadTypologiesLocal() {
@@ -302,6 +306,213 @@ export function loadTypologiesLocal() {
   } catch (e) {
     return null;
   }
+}
+
+// ═══════════════════════════════════════════════════════
+//  PROYECTOS POD — pod_projects + subcolección typs
+//  Modelo:
+//    pod_projects/{projectId} → { name, proj, updatedAt, createdAt, createdBy }
+//    pod_projects/{projectId}/typs/{typId} → { ...typData, order, updatedAt }
+//  Backwards-compat: docs legacy traen `typs` array embebido. Se migran on-load.
+// ═══════════════════════════════════════════════════════
+
+export async function loadProjectFull(projectId) {
+  const ref = doc(db, COL_POD_PROJECTS, projectId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return null;
+  const data = snap.data();
+  const typsSnap = await getDocs(
+    query(collection(db, COL_POD_PROJECTS, projectId, SUB_TYPS), orderBy('order', 'asc'))
+  );
+  let typs = typsSnap.docs.map(d => d.data());
+  // Legacy: si la subcolección está vacía y el doc principal trae typs embebidos,
+  // migramos a subcolección y devolvemos esos typs.
+  if (typs.length === 0 && Array.isArray(data.typs) && data.typs.length > 0) {
+    typs = data.typs;
+    try { await saveTypsBatch(projectId, typs); } catch (e) {
+      console.warn('[loadProjectFull] migration to subcollection failed:', e.message);
+    }
+  }
+  return { _id: projectId, ...data, typs };
+}
+
+// Listener combinado: doc principal + subcolección typs.
+// Llama onUpdate({proj, typs, hasPendingWrites, exists}) en cada cambio remoto.
+export function subscribeProject(projectId, onUpdate) {
+  let projData = null;
+  let typsData = null;
+  let projExists = true;
+  let projPending = false;
+  let typsPending = false;
+  let useEmbedded = false;
+
+  const emit = () => {
+    if (projData === null && projExists) return;
+    onUpdate({
+      proj: projData?.proj || null,
+      typs: useEmbedded ? (projData?.typs || []) : (typsData || []),
+      hasPendingWrites: projPending || typsPending,
+      exists: projExists,
+      raw: projData,
+    });
+  };
+
+  const unMain = onSnapshot(
+    doc(db, COL_POD_PROJECTS, projectId),
+    (snap) => {
+      projPending = snap.metadata.hasPendingWrites;
+      if (!snap.exists()) {
+        projExists = false;
+        projData = null;
+        emit();
+        return;
+      }
+      projExists = true;
+      projData = snap.data();
+      emit();
+    },
+    (err) => console.warn('[subscribeProject:main]', err.message)
+  );
+
+  const unTyps = onSnapshot(
+    query(collection(db, COL_POD_PROJECTS, projectId, SUB_TYPS), orderBy('order', 'asc')),
+    (snap) => {
+      typsPending = snap.metadata.hasPendingWrites;
+      typsData = snap.docs.map(d => d.data());
+      // Si subcolección está vacía pero el doc principal trae typs embebidos (legacy),
+      // usar embedded en este snapshot. La migración se dispara en loadProjectFull.
+      useEmbedded = typsData.length === 0 && Array.isArray(projData?.typs) && projData.typs.length > 0;
+      emit();
+    },
+    (err) => console.warn('[subscribeProject:typs]', err.message)
+  );
+
+  return () => { unMain(); unTyps(); };
+}
+
+export async function saveProjectMain(projectId, projData, opts = {}) {
+  const { isNew = false, createdBy = 'unknown' } = opts;
+  const ref = projectId
+    ? doc(db, COL_POD_PROJECTS, projectId)
+    : doc(collection(db, COL_POD_PROJECTS));
+  const payload = {
+    name: projData.name || '',
+    proj: projData,
+    updatedAt: serverTimestamp(),
+    ...(isNew ? { createdAt: serverTimestamp(), createdBy } : {}),
+  };
+  await setDoc(ref, payload, { merge: !isNew });
+  return ref.id;
+}
+
+export async function saveTyp(projectId, typ, order = 0) {
+  if (!projectId || !typ?.id) return;
+  await setDoc(
+    doc(db, COL_POD_PROJECTS, projectId, SUB_TYPS, typ.id),
+    { ...typ, order, updatedAt: serverTimestamp() },
+    { merge: true }
+  );
+}
+
+// Diff dos objetos en paths con dot-notation (para escrituras Firestore granulares).
+// Arrays se tratan como atómicos (Firestore no soporta dot-notation con índices numéricos).
+// Strings JSON-encoded (ej. termWallCfg) también se tratan como primitivos.
+export function diffPaths(oldObj, newObj, prefix = '') {
+  const changes = {};
+  const a = oldObj || {};
+  const b = newObj || {};
+  const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
+  for (const key of keys) {
+    const oldVal = a[key];
+    const newVal = b[key];
+    if (oldVal === newVal) continue;
+    const path = prefix ? `${prefix}.${key}` : key;
+    if (Array.isArray(newVal) || Array.isArray(oldVal)) {
+      if (JSON.stringify(oldVal) !== JSON.stringify(newVal)) {
+        changes[path] = newVal === undefined ? null : newVal;
+      }
+      continue;
+    }
+    const aIsObj = typeof oldVal === 'object' && oldVal !== null;
+    const bIsObj = typeof newVal === 'object' && newVal !== null;
+    if (aIsObj && bIsObj) {
+      Object.assign(changes, diffPaths(oldVal, newVal, path));
+      continue;
+    }
+    changes[path] = newVal === undefined ? null : newVal;
+  }
+  return changes;
+}
+
+// Escribe campos específicos de un typ usando dot-notation (merge per-path nativo de Firestore).
+// Permite que dos PCs editando campos distintos del mismo typ no se pisen.
+export async function saveTypFields(projectId, typId, fields) {
+  if (!projectId || !typId || !fields || Object.keys(fields).length === 0) return;
+  const payload = { ...fields, updatedAt: serverTimestamp() };
+  await setDoc(
+    doc(db, COL_POD_PROJECTS, projectId, SUB_TYPS, typId),
+    payload,
+    { merge: true }
+  );
+}
+
+// Escribe campos específicos del doc principal del proyecto (dot-notation merge).
+export async function saveProjectFields(projectId, fields) {
+  if (!projectId || !fields || Object.keys(fields).length === 0) return;
+  const payload = { ...fields, updatedAt: serverTimestamp() };
+  await setDoc(doc(db, COL_POD_PROJECTS, projectId), payload, { merge: true });
+}
+
+export async function saveTypsBatch(projectId, typs) {
+  if (!projectId || !Array.isArray(typs) || typs.length === 0) return;
+  const CHUNK = 450;
+  for (let i = 0; i < typs.length; i += CHUNK) {
+    const chunk = typs.slice(i, i + CHUNK);
+    const batch = writeBatch(db);
+    chunk.forEach((t, idx) => {
+      if (!t?.id) return;
+      batch.set(
+        doc(db, COL_POD_PROJECTS, projectId, SUB_TYPS, t.id),
+        { ...t, order: i + idx, updatedAt: serverTimestamp() },
+        { merge: true }
+      );
+    });
+    await batch.commit();
+  }
+}
+
+export async function deleteTypDoc(projectId, typId) {
+  if (!projectId || !typId) return;
+  await deleteDoc(doc(db, COL_POD_PROJECTS, projectId, SUB_TYPS, typId));
+}
+
+export async function deleteProjectFull(projectId) {
+  if (!projectId) return;
+  // Borra todos los docs de la subcolección + doc principal.
+  const typsSnap = await getDocs(collection(db, COL_POD_PROJECTS, projectId, SUB_TYPS));
+  if (typsSnap.size > 0) {
+    const CHUNK = 450;
+    const refs = typsSnap.docs.map(d => d.ref);
+    for (let i = 0; i < refs.length; i += CHUNK) {
+      const batch = writeBatch(db);
+      refs.slice(i, i + CHUNK).forEach(r => batch.delete(r));
+      await batch.commit();
+    }
+  }
+  await deleteDoc(doc(db, COL_POD_PROJECTS, projectId));
+}
+
+export async function duplicateProjectFull(projectId, newName) {
+  const original = await loadProjectFull(projectId);
+  if (!original) throw new Error('Proyecto origen no existe');
+  const newProj = { ...original.proj, name: newName || (original.proj?.name || '') + ' (copia)' };
+  const newTyps = (original.typs || []).map(t => ({
+    ...t,
+    id: `typ-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+  }));
+  const newId = await saveProjectMain(null, newProj, { isNew: true });
+  await saveTypsBatch(newId, newTyps);
+  return { _id: newId, proj: newProj, typs: newTyps };
 }
 
 export async function migrateLocalToFirestore() {

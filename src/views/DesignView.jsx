@@ -7,6 +7,7 @@ import { STROKE_COLORS } from '../constants/colors.js';
 import { REND_ADHESIVO_M2_SACO, REND_FRAGUE_M2_SACO, REND_ESPACIADOR_M2_BOLSA, REND_ESQUINERO_ML_TIRA, REND_PASTA_M2_SACO, REND_LATEX_M2_TINETA, REND_ESMALTE_M2_TINETA, MO_COST_POD, REND_CUARZ_M2_TINETA, REND_MORTERO_M2_SACO, EST_REF_AREA_NETA, EST_REF_KG, EST_MERMA, BASE_REF_AREA_PISO } from '../constants/economics.js';
 import { STAGES } from '../constants/stages.js';
 import { fmtC, fmtN, fmtUF } from '../utils/format.js';
+import { isReceptaculoMat } from '../utils/sanitarios.js';
 import { DkSel } from '../components/ui/DkSel.jsx';
 import { DkIn } from '../components/ui/DkIn.jsx';
 import { ResBadge } from '../components/ui/ResBadge.jsx';
@@ -264,7 +265,7 @@ export default function DesignView({ ctx }) {
           {key:'artExtractor',slot:'extractor',label:'Extractor'},
         ];
         const selTina=artAll.find(m=>m.id===c.artTina);
-        const isReceptaculo=!!(selTina && /RECEPT/i.test(selTina.name||''));
+        const isReceptaculo=isReceptaculoMat(selTina);
         const hasRealTina=!!selTina && !isReceptaculo;
         const artFijos = artFijosAll.filter(m=>!isTinaOnlyInsumo(m) || hasRealTina);
         const fijosCost = artFijos.reduce((s,m)=>s+(m.baseQty*m.cost),0);
@@ -277,7 +278,7 @@ export default function DesignView({ ctx }) {
           {title:'Griferías',slots:['artGrifLav','artGrifTina']},
           {title:'Extractor',slots:['artExtractor']},
         ];
-        const onArtChange=(sk,val)=>{if(sk==='artTina'){const nm=artAll.find(m=>m.id===val);const nr=!!(nm && /RECEPT/i.test(nm.name||''));updConf(actTypId, nr?{artTina:val}:{artTina:val,artMampara:''});}else{updConf(actTypId,{[sk]:val});}};
+        const onArtChange=(sk,val)=>{if(sk==='artTina'){const nm=artAll.find(m=>m.id===val);const nr=isReceptaculoMat(nm);updConf(actTypId, nr?{artTina:val}:{artTina:val,artMampara:''});}else{updConf(actTypId,{[sk]:val});}};
         return(
         <div className="space-y-4">
           <div className="bg-slate-900 rounded-2xl border border-slate-700 overflow-hidden text-white">
@@ -289,7 +290,7 @@ export default function DesignView({ ctx }) {
               {slotGroups.map(sg=><div key={sg.title} className="bg-slate-800/60 rounded-xl p-3 space-y-2">
                 <h5 className="text-[11px] text-blue-400 font-bold uppercase">{sg.title}</h5>
                 <div className={`grid gap-2 ${sg.slots.length>=3?'grid-cols-3':sg.slots.length===2?'grid-cols-2':''}`}>
-                  {sg.slots.map(sk=>{const sd=slotDefs.find(d=>d.key===sk);if(!sd)return null;const opts=artAll.filter(m=>m.slot===sd.slot);const sel=artAll.find(m=>m.id===c[sk]);return(
+                  {sg.slots.map(sk=>{const sd=slotDefs.find(d=>d.key===sk);if(!sd)return null;const opts=artAll.filter(m=>m.slot===sd.slot || (sd.slot==='tina' && m.slot==='receptaculo'));const sel=artAll.find(m=>m.id===c[sk]);return(
                     <div key={sk}>
                       <select className="w-full p-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-xs outline-none" value={c[sk]||''} onChange={e=>onArtChange(sk,e.target.value)}>
                         <option value="">{sd.label}...</option>
@@ -333,7 +334,7 @@ export default function DesignView({ ctx }) {
           updConf(actTypId,{termWallCfg:JSON.stringify(nw)});
         };
         const hasTina = c.artTina && mats.some(m=>m.id===c.artTina);
-        const hasTinaReal = c.artTina && mats.some(m=>m.id===c.artTina && !/RECEPT/i.test(m.name||''));
+        const hasTinaReal = c.artTina && mats.some(m=>m.id===c.artTina && !isReceptaculoMat(m));
         const fijosCost = tmFijos.reduce((s,m)=>s+(m.baseQty*m.cost),0);
         const hTM = Number(actTyp.geometry.height)||2.4;
         let ceramAreaTM=0,pintAreaTM=0,latexAreaTM=0,esmalteAreaTM=0,latexCoatsTM=2,esmalteCoatsTM=2;
