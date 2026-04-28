@@ -674,7 +674,7 @@ export default function App() {
           }
           if(mat.cat==='SANITARIO ARTEFACTOS'){
             if(mat.slot){
-              const slotToConf={tina:'artTina',wc_tanque:'artWCTanque',wc_taza:'artWCTaza',wc_asiento:'artWCAsiento',lavamanos:'artLavamanos',pedestal:'artPedestal',grif_lav:'artGrifLav',grif_tina:'artGrifTina',extractor:'artExtractor',mampara_barra:'artMampara'};
+              const slotToConf={tina:'artTina',receptaculo:'artTina',wc_tanque:'artWCTanque',wc_taza:'artWCTaza',wc_asiento:'artWCAsiento',lavamanos:'artLavamanos',pedestal:'artPedestal',grif_lav:'artGrifLav',grif_tina:'artGrifTina',extractor:'artExtractor',mampara_barra:'artMampara'};
               const confKey=slotToConf[mat.slot];
               if(confKey && c[confKey]===mat.id){pQ=mat.baseQty;isP=true;}
             } else {
